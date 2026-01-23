@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: spring
+
+  datasource:
+    url: ${DB_URL:jdbc:mysql://192.168.0.212:3306/metaverse?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+
+jwt:
+  secret: ${JWT_SECRET}
+  access-token-exp-min: ${JWT_ACCESS_TOKEN_EXP_MIN:60}
+  refresh-token-exp-days: ${JWT_REFRESH_TOKEN_EXP_DAYS:14}
+
