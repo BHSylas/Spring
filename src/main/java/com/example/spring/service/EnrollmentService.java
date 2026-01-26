@@ -1,6 +1,7 @@
 package com.example.spring.service;
 
 import com.example.spring.entity.Enrollment;
+import com.example.spring.entity.EnrollmentStatus;
 import com.example.spring.entity.Lecture;
 import com.example.spring.entity.User;
 import com.example.spring.repository.EnrollmentRepository;
@@ -18,7 +19,7 @@ public class EnrollmentService {
     private final LectureRepository lectureRepository;
 
     public void enroll(User user, Long lectureId){
-        if (enrollmentRepository.existsByUserIdAndLectureId(user.getUserId(), lectureId)){
+        if (enrollmentRepository.existsByUserUserIdAndLectureId(user.getUserId(), lectureId)){
             throw new IllegalStateException("이미 수강 중인 강의 입니다.");
         }
 
