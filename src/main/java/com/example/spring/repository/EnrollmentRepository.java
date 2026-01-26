@@ -1,7 +1,7 @@
-package com.example.spring.Repository;
+package com.example.spring.repository;
 
-import com.example.spring.Entity.Enrollment;
-import com.example.spring.Entity.EnrollmentStatus;
+import com.example.spring.entity.Enrollment;
+import com.example.spring.entity.EnrollmentStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

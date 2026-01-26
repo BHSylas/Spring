@@ -1,8 +1,9 @@
-package com.example.spring.Service;
+package com.example.spring.service;
 
-import com.example.spring.DTO.VideoProgressResponseDTO;
-import com.example.spring.Entity.Enrollment;
-import com.example.spring.Repository.EnrollmentRepository;
+import com.example.spring.entity.User;
+import com.example.spring.dto.VideoProgressResponseDTO;
+import com.example.spring.entity.Enrollment;
+import com.example.spring.repository.EnrollmentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,7 +21,7 @@ public class ProgressService {
             int duration
 //            LocalDateTime clientLastAccessedAt
     ){
-        Enrollment enrollment = enrollmentRepository.findByUserIdAndLectureId(user.getId(), lectureId)
+        Enrollment enrollment = enrollmentRepository.findByUserIdAndLectureId(user.getUserId(), lectureId)
                 .orElseThrow(() -> new IllegalStateException("수강 정보 없음"));
 
         if (duration <=0 ){

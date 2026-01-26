@@ -1,6 +1,6 @@
-package com.example.spring.Repository;
+package com.example.spring.repository;
 
-import com.example.spring.Entity.Lecture;
+import com.example.spring.entity.Lecture;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

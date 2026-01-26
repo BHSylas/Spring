@@ -1,4 +1,4 @@
-package com.example.spring.Entity;
+package com.example.spring.entity;
 
 public enum EnrollmentStatus {
     NOT_STARTED,
