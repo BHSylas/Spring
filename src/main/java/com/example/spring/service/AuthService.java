@@ -54,7 +54,7 @@ public class AuthService {
         userRepository.save(user);
     }
 
-    public AuthResponseDTO login(LoginRequestDTO req) {
+    public TokenPairDTO login(LoginRequestDTO req) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(req.getEmail(), req.getPassword())
         );
@@ -66,13 +66,12 @@ public class AuthService {
         String refresh = jwtService.generateRefreshToken(u.getUserId());
         saveRefreshToken(u.getUserId(), refresh);
 
-        return new AuthResponseDTO(access, refresh);
+        return new TokenPairDTO(access, refresh, u.getUserNickname(), u.getUserName());
     }
 
-    // Refresh Token 로테이션: 기존 refresh는 폐기하고 새 access/refresh 발급
-    public AuthResponseDTO refresh(RefreshRequestDTO req) {
-        String refreshToken = req.getRefreshToken();
 
+    // Refresh Token 로테이션: 기존 refresh는 폐기하고 새 access/refresh 발급
+    public TokenPairDTO refresh(String refreshToken) {
         Claims claims;
         try {
             claims = jwtService.parseClaims(refreshToken);
@@ -82,7 +81,7 @@ public class AuthService {
 
         String typ = claims.get("typ", String.class);
         if (!"refresh".equals(typ)) {
-            throw new IllegalArgumentException("refresh 토큰이 아닙니다.");
+            throw new UnauthorizedException("refresh 토큰이 아닙니다.");
         }
 
         Long userId = Long.valueOf(claims.getSubject());
@@ -91,15 +90,11 @@ public class AuthService {
         RefreshToken stored = refreshTokenRepository.findByTokenHash(hash)
                 .orElseThrow(() -> new UnauthorizedException("유효하지 않은 refresh 토큰입니다."));
 
-        if (stored.isRevoked()) {
-            throw new UnauthorizedException("폐기된 refresh 토큰입니다.");
+        if (stored.isRevoked() || stored.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new UnauthorizedException("만료되었거나 폐기된 refresh 토큰입니다.");
         }
 
-        if (stored.getExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new UnauthorizedException("만료된 refresh 토큰입니다.");
-        }
-
-        // 로테이션: 기존 토큰 폐기
+        // 로테이션
         stored.revoke();
         refreshTokenRepository.save(stored);
 
@@ -110,7 +105,7 @@ public class AuthService {
         String newRefresh = jwtService.generateRefreshToken(u.getUserId());
         saveRefreshToken(u.getUserId(), newRefresh);
 
-        return new AuthResponseDTO(newAccess, newRefresh);
+        return new TokenPairDTO(newAccess, newRefresh, u.getUserNickname(), u.getUserName());
     }
 
     public MeResponseDTO me() {

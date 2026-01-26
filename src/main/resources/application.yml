@@ -21,3 +21,9 @@ jwt:
   access-token-exp-min: ${JWT_ACCESS_TOKEN_EXP_MIN:60}
   refresh-token-exp-days: ${JWT_REFRESH_TOKEN_EXP_DAYS:14}
 
+app:
+  cookie:
+    secure: ${COOKIE_SECURE:false}
+    same-site: ${COOKIE_SAMESITE:Lax}
+
+
