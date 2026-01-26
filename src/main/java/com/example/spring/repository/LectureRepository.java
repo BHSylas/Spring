@@ -7,9 +7,9 @@ import java.util.List;
 
 
 public interface LectureRepository extends JpaRepository<Lecture, Long> {
-    List<Lecture> findAllByIsActiveTrue();
+//    List<Lecture> findAllByIsActiveTrue();
 
-    List<Lecture> findAllByProfessorId(Long professorId);
+//    List<Lecture> findAllByProfessorId(Long professorId);
 
     boolean existsByIdAndApprovedTrue(Long lectureId);
 }

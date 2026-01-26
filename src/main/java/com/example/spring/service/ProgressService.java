@@ -21,7 +21,7 @@ public class ProgressService {
             int duration
 //            LocalDateTime clientLastAccessedAt
     ){
-        Enrollment enrollment = enrollmentRepository.findByUserIdAndLectureId(user.getUserId(), lectureId)
+        Enrollment enrollment = enrollmentRepository.findByUserUserIdAndLectureId(user.getUserId(), lectureId)
                 .orElseThrow(() -> new IllegalStateException("수강 정보 없음"));
 
         if (duration <=0 ){
