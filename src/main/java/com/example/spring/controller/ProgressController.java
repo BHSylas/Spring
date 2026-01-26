@@ -1,8 +1,9 @@
-package com.example.spring.Controller;
+package com.example.spring.controller;
 
-import com.example.spring.DTO.VideoProgressRequestDTO;
-import com.example.spring.DTO.VideoProgressResponseDTO;
-import com.example.spring.Service.ProgressService;
+import com.example.spring.dto.VideoProgressRequestDTO;
+import com.example.spring.dto.VideoProgressResponseDTO;
+import com.example.spring.entity.User;
+import com.example.spring.service.ProgressService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;

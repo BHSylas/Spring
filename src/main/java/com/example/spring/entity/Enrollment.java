@@ -1,9 +1,10 @@
-package com.example.spring.Entity;
+package com.example.spring.entity;
 
-
+import com.example.spring.entity.EnrollmentStatus;
+import com.example.spring.entity.Lecture;
+import com.example.spring.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.boot.security.autoconfigure.SecurityProperties;
 
 import java.time.LocalDateTime;
 

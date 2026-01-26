@@ -1,6 +1,6 @@
-package com.example.spring.DTO;
+package com.example.spring.dto;
 
-import com.example.spring.Entity.EnrollmentStatus;
+import com.example.spring.entity.EnrollmentStatus;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 

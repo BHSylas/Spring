@@ -1,7 +1,8 @@
-package com.example.spring.Controller;
+package com.example.spring.controller;
 
-import com.example.spring.DTO.EnrollmentRequestDTO;
-import com.example.spring.Entity.Enrollment;
+import com.example.spring.dto.EnrollmentRequestDTO;
+import com.example.spring.entity.User;
+import com.example.spring.service.EnrollmentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
