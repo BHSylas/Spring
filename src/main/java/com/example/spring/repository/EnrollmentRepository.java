@@ -3,6 +3,8 @@ package com.example.spring.repository;
 import com.example.spring.entity.Enrollment;
 import com.example.spring.entity.EnrollmentStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -25,5 +27,8 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
 
     // 수강 여부 체크
     boolean existsByUserUserIdAndLectureId(Long userId, Long lectureId);
+
+    @Query("select e.lecture.id from Enrollment e where e.user.userId = :userId")
+    List<Long> findLectureIdsByUserId(@Param("userId") Long userId);
 
 }

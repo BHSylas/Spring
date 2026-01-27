@@ -17,7 +17,7 @@ spring:
         format_sql: true
 
 jwt:
-  secret: SWFtZXJyb3JpQW1lcnJvcmlhTWVycm9ySWFtRXJyb3JpYW1lUnJvcmlhbWVyUm9ySWFtZXJyT3JpYW1lcnJvUg
+  secret: mNRYoC8nB06NbOtAOwI5VLbK6HCCo+NqDrhB/uxg8S1q6lvej1WS6RNdzFEL7jCR
   access-token-exp-min: 60
   refresh-token-exp-days: 14
 
