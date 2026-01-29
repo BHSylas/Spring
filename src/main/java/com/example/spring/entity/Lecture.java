@@ -35,4 +35,7 @@ public class Lecture {
     @Column(nullable = false)
     private Boolean approved;
 
+    @Column(nullable = false)
+    private Long video_id;
+
 }
