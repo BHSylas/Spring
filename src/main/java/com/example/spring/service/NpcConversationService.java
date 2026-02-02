@@ -100,7 +100,7 @@ public class NpcConversationService {
                 .orElseThrow(() -> new IllegalArgumentException("NPC대화 없음"));
 
         return conversationRepository.findNextCandidate(
-                current.getLecture().getId(),
+                current.getLecture().getLectureId(),
                 current.getCountry(),
                 current.getPlace(),
                 current.getLevel(),
@@ -134,7 +134,7 @@ public class NpcConversationService {
         NPCConversation next = conversationRepository.findById(nextId)
                 .orElseThrow(() -> new IllegalArgumentException("다음 NPC 대화 없음"));
 
-        if (!current.getLecture().getId().equals(next.getLecture().getId())) {
+        if (!current.getLecture().getLectureId().equals(next.getLecture().getLectureId())) {
             throw new IllegalStateException("같은 강의 내 NPC 대화만 연결 가능");
         }
 
@@ -158,7 +158,7 @@ public class NpcConversationService {
         return NPCConversationResponseDTO.builder()
                 .id(npc.getId())
                 .professorId(npc.getProfessor().getUserId())
-                .lectureId(npc.getLecture().getId())
+                .lectureId(npc.getLecture().getLectureId())
                 .lectureTitle(npc.getLecture().getTitle())
                 .country(npc.getCountry())
                 .place(npc.getPlace())
