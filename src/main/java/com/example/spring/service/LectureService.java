@@ -69,6 +69,7 @@ public class LectureService {
      * - enrolling=true/false면 '내 수강중' / '미수강' 필터
      * - total count 정확(DB 필터)
      */
+    @Transactional
     public Page<LectureResponseDTO> listApprovedWithFilters(Long currentUserId, String language, Boolean enrolling, Pageable pageable) {
         boolean allLang = (language == null || language.isBlank() || "ALL".equalsIgnoreCase(language));
 
@@ -104,11 +105,13 @@ public class LectureService {
     }
 
     // 기존 메서드도 유지(호환)
+    @Transactional
     public Page<LectureResponseDTO> listApproved(Pageable pageable) {
         return lectureRepository.findByStatus(LectureStatus.APPROVED, pageable)
                 .map(this::toLectureResponse);
     }
 
+    @Transactional
     public LectureResponseDTO getLectureDetail(Long lectureId) {
         Lecture lecture = lectureRepository.findById(lectureId)
                 .orElseThrow(() -> new NotFoundException("강의를 찾을 수 없습니다."));
