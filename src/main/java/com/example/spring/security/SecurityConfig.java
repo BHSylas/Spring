@@ -3,6 +3,7 @@ package com.example.spring.security;
 import org.springframework.context.annotation.*;
 import org.springframework.security.authentication.*;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.*;
@@ -14,6 +15,7 @@ import org.springframework.web.cors.*;
 import java.util.List;
 
 @Configuration
+@EnableMethodSecurity(prePostEnabled = true) // @PreAuthorize 활성화
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
@@ -35,7 +37,13 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // preflight 요청 허용
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/auth/**", "/api/lectures/**").permitAll()
+
+                        // URL 레벨 1차 방어
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/instructor/**").hasAnyRole("PROFESSOR", "ADMIN")
+                        .requestMatchers("/api/me/**").hasAnyRole("USER", "ADMIN")
+
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

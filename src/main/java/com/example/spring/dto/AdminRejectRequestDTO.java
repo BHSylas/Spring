@@ -5,6 +5,6 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor
-public class LectureEnterRequestDTO {
-    private long lectureId;
+public class AdminRejectRequestDTO {
+    private String reason;
 }

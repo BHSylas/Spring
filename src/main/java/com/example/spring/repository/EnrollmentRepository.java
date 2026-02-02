@@ -2,6 +2,8 @@ package com.example.spring.repository;
 
 import com.example.spring.entity.Enrollment;
 import com.example.spring.entity.EnrollmentStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -10,25 +12,20 @@ import java.util.List;
 import java.util.Optional;
 
 public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
-    // 유저 + 강의 수강 정보 (핵심 ⭐)
-    Optional<Enrollment> findByUserUserIdAndLectureId(Long userId, Long lectureId);
+    // 유저 + 강의 수강 정보
+    Optional<Enrollment> findByUser_UserIdAndLecture_LectureId(Long userId, Long lectureId);
 
-    // 유저가 수강 중인 모든 강의
-    List<Enrollment> findAllByUserUserId(Long userId);
+    boolean existsByUser_UserIdAndLecture_LectureId(Long userId, Long lectureId);
 
-    // 특정 강의 수강생 목록
-    List<Enrollment> findAllByLectureId(Long lectureId);
+    Page<Enrollment> findAllByUser_UserId(Long userId, Pageable pageable);
 
-    // 유저 + 상태별 강의 조회 (진행중 / 완료)
-    List<Enrollment> findAllByUserUserIdAndStatus(Long userId, EnrollmentStatus status);
+    Page<Enrollment> findAllByLecture_LectureId(Long lectureId, Pageable pageable);
 
-    // 강의 + 상태별 수강생 조회 (교수용)
-    List<Enrollment> findAllByLectureIdAndStatus(Long lectureId, EnrollmentStatus status);
+    // 강의의 수강 목록(상태별)
+    Page<Enrollment> findAllByLecture_LectureIdAndStatus(Long lectureId, EnrollmentStatus status, Pageable pageable);
 
-    // 수강 여부 체크
-    boolean existsByUserUserIdAndLectureId(Long userId, Long lectureId);
-
-    @Query("select e.lecture.id from Enrollment e where e.user.userId = :userId")
+    //  내가 수강중인 lectureId 목록(필터링용)
+    @Query("select e.lecture.lectureId from Enrollment e where e.user.userId = :userId")
     List<Long> findLectureIdsByUserId(@Param("userId") Long userId);
 
 }
