@@ -1,28 +1,24 @@
 package com.example.spring.repository;
 
 import com.example.spring.entity.Lecture;
+import com.example.spring.entity.LectureStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.List;
+import java.util.Collection;
 
 
 public interface LectureRepository extends JpaRepository<Lecture, Long> {
-    List<Lecture> findAllByApprovedTrue();
+    Page<Lecture> findByStatus(LectureStatus status, Pageable pageable);
 
-    List<Lecture> findAllByProfessor_UserId(Long professorId);
+    Page<Lecture> findByProfessor_UserId(Long professorId, Pageable pageable);
 
-    boolean existsByIdAndApprovedTrue(Long lectureId);
+    Page<Lecture> findByStatusAndLanguage(LectureStatus status, String language, Pageable pageable);
 
-    //전체 강의 조회
-    Page<Lecture> findByLanguage(String language, Pageable pageable);
+    Page<Lecture> findByStatusAndLectureIdIn(LectureStatus status, Collection<Long> lectureIds, Pageable pageable);
+    Page<Lecture> findByStatusAndLectureIdNotIn(LectureStatus status, Collection<Long> lectureIds, Pageable pageable);
 
-    //수강중
-    Page<Lecture> findByIdIn(List<Long> ids, Pageable pageable);
-    Page<Lecture> findByIdInAndLanguage(List<Long> ids, String language, Pageable pageable);
-
-    //미수강
-    Page<Lecture> findByIdNotIn(List<Long> ids, Pageable pageable);
-    Page<Lecture> findByIdNotInAndLanguage(List<Long> ids, String language, Pageable pageable);
+    Page<Lecture> findByStatusAndLanguageAndLectureIdIn(LectureStatus status, String language, Collection<Long> lectureIds, Pageable pageable);
+    Page<Lecture> findByStatusAndLanguageAndLectureIdNotIn(LectureStatus status, String language, Collection<Long> lectureIds, Pageable pageable);
 }

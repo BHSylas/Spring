@@ -27,7 +27,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String auth = request.getHeader("Authorization");
-        if (auth == null || !auth.startsWith("Bearer")) {
+        if (auth == null || !auth.startsWith("Bearer ")) {
             chain.doFilter(request, response);
             return;
         }
@@ -44,6 +44,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
             Long userId = Long.valueOf(claims.getSubject());
             Integer roleInt = claims.get("role", Integer.class); // JSON 숫자라 Integer로 들어오는 경우가 많음
+            if (roleInt == null) {
+                chain.doFilter(request, response);
+                return;
+            }
             byte roleCode = roleInt.byteValue();
 
             String authority = UserRole.fromCode(roleCode).getAuthority();
