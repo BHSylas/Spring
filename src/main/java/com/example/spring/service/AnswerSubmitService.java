@@ -8,6 +8,7 @@ import com.example.spring.entity.User;
 import com.example.spring.entity.UserNpcAnswer;
 import com.example.spring.repository.NpcConversationRepository;
 import com.example.spring.repository.UserNpcAnswerRepository;
+import com.example.spring.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,13 +23,17 @@ public class AnswerSubmitService {
 
     private final NpcConversationRepository npcConversationRepository;
     private final UserNpcAnswerRepository userNpcAnswerRepository;
+    private final UserRepository userRepository;
 
-    public AnswerSubmitResponseDTO answerSubmit(User user, Long npcConversationId, List<String> userAnswer) {
+    public AnswerSubmitResponseDTO answerSubmit(Long userId, Long npcConversationId, List<String> userAnswer) {
         NPCConversation npc = npcConversationRepository.findById(npcConversationId).orElseThrow(()
         -> new IllegalArgumentException("NPC 대화 없음"));
 
+        User user = userRepository.findById(userId).orElseThrow(() ->
+                new IllegalArgumentException("사용자 없음"));
+
         UserNpcAnswer record = userNpcAnswerRepository
-                .findByUserAndNpcConversation(user, npc)
+                .findByUserUserIdAndNpcConversation(userId, npc)
                 .orElseGet(() -> UserNpcAnswer.builder()
                         .user(user)
                         .npcConversation(npc)
