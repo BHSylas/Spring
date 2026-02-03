@@ -39,6 +39,8 @@ public interface NpcConversationRepository extends JpaRepository<NPCConversation
              Long currentNpdId);
 
 
+    long countByCountryAndLevel(Country country, Level level);
 
+    long countByProfessor_UserIdAndCountryAndLevel(Long professorId, Country country, Level level );
 
 }

@@ -19,8 +19,8 @@ public class AnswerSubmitController {
 
     AnswerSubmitService answerSubmitService;
     @PostMapping("/answer/{ConversationId}")
-    public ResponseEntity<AnswerSubmitResponseDTO> submitAnswer(@AuthenticationPrincipal User user, @PathVariable Long ConversationId,
+    public ResponseEntity<AnswerSubmitResponseDTO> submitAnswer(@AuthenticationPrincipal Long userId, @PathVariable Long ConversationId,
                                                                 @RequestBody AnswerSubmitRequestDTO answerSubmitRequestDTO) {
-        return ResponseEntity.ok(answerSubmitService.answerSubmit(user,ConversationId,answerSubmitRequestDTO.getUserAnswer()));
+        return ResponseEntity.ok(answerSubmitService.answerSubmit(userId,ConversationId,answerSubmitRequestDTO.getUserAnswer()));
     }
 }
