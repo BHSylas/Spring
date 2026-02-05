@@ -22,9 +22,9 @@ public class NPCConversationController {
     private final NpcConversationService npcConversationService;
 
     @PostMapping
-    public ResponseEntity<Void> create(@AuthenticationPrincipal Long professorId, @RequestBody NPCConversationRequestDTO requestDTO){
-        npcConversationService.create(professorId, requestDTO);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<Long> create(@AuthenticationPrincipal Long professorId, @RequestBody NPCConversationRequestDTO requestDTO){
+       return ResponseEntity.ok(npcConversationService.create(professorId, requestDTO));
+
     }
 
     @GetMapping("/next-candidates/{id}")

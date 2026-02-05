@@ -22,7 +22,7 @@ public class NpcConversationService {
     private final LectureRepository lectureRepository;
 
     @Transactional
-    public void create(Long professorId, NPCConversationRequestDTO requestDTO){
+    public Long create(Long professorId, NPCConversationRequestDTO requestDTO){
         Lecture lecture = lectureRepository.findById(requestDTO.getLectureId())
                 .orElseThrow(() -> new IllegalArgumentException("강의 없음"));
 
@@ -48,6 +48,8 @@ public class NpcConversationService {
         if (requestDTO.getNextConversationId() != null) {
             setNextConversation(npc, requestDTO.getNextConversationId());
         }
+
+        return  npc.getId();
 
     }
 
@@ -155,6 +157,10 @@ public class NpcConversationService {
     }
 
     private NPCConversationResponseDTO toResponse(NPCConversation npc) {
+
+        if (npc.getOptions() != null) npc.getOptions().size();
+        if (npc.getAnswers() != null) npc.getAnswers().size();
+
         return NPCConversationResponseDTO.builder()
                 .id(npc.getId())
                 .professorId(npc.getProfessor().getUserId())
