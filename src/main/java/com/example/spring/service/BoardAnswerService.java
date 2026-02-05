@@ -94,7 +94,7 @@ public class BoardAnswerService {
                 .map(answer -> BoardAnswerResponseDTO.builder()
                         .answerId(answer.getAnswerId())
                         .writerId(answer.getWriter().getUserId())
-                        .writerName(answer.getWriter().getUserName())
+                        .writerName(answer.getWriter().getUserNickname())
                         .content(answer.getContent())
                         .createdAt(answer.getCreatedAt())
                         .build()

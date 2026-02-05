@@ -14,7 +14,8 @@ import java.util.List;
 public class NPCConversation {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "npc_id")
+    private Long npcId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name= "lecture_id", nullable = false)

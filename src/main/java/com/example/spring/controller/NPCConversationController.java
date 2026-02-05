@@ -1,14 +1,16 @@
 package com.example.spring.controller;
 
-import com.example.spring.dto.ConversationResponseDTO;
 import com.example.spring.dto.NPCConversationRequestDTO;
 import com.example.spring.dto.NPCConversationResponseDTO;
 import com.example.spring.entity.Country;
 import com.example.spring.entity.Level;
 import com.example.spring.entity.Place;
-import com.example.spring.entity.User;
 import com.example.spring.service.NpcConversationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -42,11 +44,15 @@ public class NPCConversationController {
     }
 
     @GetMapping("/list")
-    public ResponseEntity<List<NPCConversationResponseDTO>> list(@AuthenticationPrincipal Long professorId,
+    public ResponseEntity<Page<NPCConversationResponseDTO>> list(@AuthenticationPrincipal Long professorId,
                                                                  @RequestParam(required = false)Country country,
                                                                  @RequestParam(required = false) Place place,
-                                                                 @RequestParam(required = false) Level level){
-        return ResponseEntity.ok(npcConversationService.list(professorId,country,place, level));
+                                                                 @RequestParam(required = false) Level level,
+                                                                 @RequestParam(defaultValue = "0") int page,
+                                                                 @RequestParam(defaultValue = "10") int size){
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        return ResponseEntity.ok(npcConversationService.list(professorId,country,place, level,pageable));
     }
 
     @GetMapping("/list/{id}")

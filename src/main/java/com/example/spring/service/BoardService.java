@@ -11,6 +11,7 @@ import com.example.spring.repository.EnrollmentRepository;
 import com.example.spring.repository.LectureRepository;
 import com.example.spring.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -92,21 +93,29 @@ public class BoardService {
 
     }
 
+//    @Transactional(readOnly = true)
+//    public List<BoardResponseDTO> boardList(BoardType boardType, Long lectureId){
+//        List<Board> boards;
+//
+//        if(boardType == BoardType.LECTURE_QNA){
+//            Lecture lecture = lectureRepository.findById(lectureId)
+//                    .orElseThrow(() -> new IllegalArgumentException("강좌 없음"));
+//
+//            boards = boardRepository.findByBoardTypeAndLectureAndDeletedFalseOrderByCreatedAtDesc(boardType, lecture);
+//        }else{
+//            boards =  boardRepository.findByBoardTypeAndDeletedFalseOrderByPinnedDescCreatedAtDesc(boardType);
+//        }
+//        return boards.stream().map(this::toDTO).toList();
+//
+//    }
+
     @Transactional(readOnly = true)
-    public List<BoardResponseDTO> boardList(BoardType boardType, Long lectureId){
-        List<Board> boards;
-
-        if(boardType == BoardType.LECTURE_QNA){
-            Lecture lecture = lectureRepository.findById(lectureId)
-                    .orElseThrow(() -> new IllegalArgumentException("강좌 없음"));
-
-            boards = boardRepository.findByBoardTypeAndLectureAndDeletedFalseOrderByCreatedAtDesc(boardType, lecture);
-        }else{
-            boards =  boardRepository.findByBoardTypeAndDeletedFalseOrderByPinnedDescCreatedAtDesc(boardType);
-        }
-        return boards.stream().map(this::toDTO).toList();
-
+    public Page<BoardResponseDTO> searchBoard(BoardType boardType, Long lectureId,
+                                              String writerName, String title, Pageable pageable){
+        return boardRepository.searchBoard(boardType, lectureId, writerName, title, pageable)
+                .map(this::toDTO);
     }
+
 
     public BoardResponseDTO board(Long boardId){
         Board board = getBoard(boardId);

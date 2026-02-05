@@ -7,6 +7,8 @@ import com.example.spring.repository.LectureRepository;
 import com.example.spring.repository.NpcConversationRepository;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,7 +51,7 @@ public class NpcConversationService {
             setNextConversation(npc, requestDTO.getNextConversationId());
         }
 
-        return  npc.getId();
+        return  npc.getNpcId();
 
     }
 
@@ -79,17 +81,16 @@ public class NpcConversationService {
     }
 
     @Transactional(readOnly = true)
-    public List<NPCConversationResponseDTO> list(Long professorId, Country country, Place place, Level level) {
+    public Page<NPCConversationResponseDTO> list(Long professorId, Country country, Place place, Level level,
+                                                 Pageable pageable) {
         return conversationRepository
-                .findByProfessorWithFilter(professorId, country, level, place)
-                .stream()
-                .map(this::toResponse)
-                .toList();
+                .findByProfessorWithFilter(professorId, country, level, place, pageable)
+                .map(this::toResponse);
     }
 
     @Transactional(readOnly = true)
     public NPCConversationResponseDTO detailList(Long id, Long professorId){
-        NPCConversation npc = conversationRepository.findByIdAndProfessorUserId(id, professorId)
+        NPCConversation npc = conversationRepository.findByNpcIdAndProfessorUserId(id, professorId)
                 .orElseThrow(() -> new IllegalArgumentException("NPC 대화 없음 또는 권한 없음"));
 
         return toResponse(npc);
@@ -98,7 +99,7 @@ public class NpcConversationService {
     //다음 대화 후보목록 조회
     @Transactional(readOnly = true)
     public List<NPCConversationResponseDTO> getNextCandidate(Long professorId, Long id){
-        NPCConversation current = conversationRepository.findByIdAndProfessorUserId(id, professorId)
+        NPCConversation current = conversationRepository.findByNpcIdAndProfessorUserId(id, professorId)
                 .orElseThrow(() -> new IllegalArgumentException("NPC대화 없음"));
 
         return conversationRepository.findNextCandidate(
@@ -106,10 +107,10 @@ public class NpcConversationService {
                 current.getCountry(),
                 current.getPlace(),
                 current.getLevel(),
-                current.getId()
+                current.getNpcId()
                 ).stream()
                 .map(n -> NPCConversationResponseDTO.builder()
-                        .id(n.getId())
+                        .id(n.getNpcId())
                         .topic(n.getTopic())
                         .build()).toList();
 
@@ -129,8 +130,12 @@ public class NpcConversationService {
             return;
         }
 
-        if (current.getId().equals(nextId)) {
+        if (current.getNpcId().equals(nextId)) {
             throw new IllegalArgumentException("자기 자신은 다음 대화로 설정 불가");
+        }
+
+        if (isCircularReference(current.getNpcId(), nextId)){
+            throw new IllegalStateException("순환 참조가 발생하여 연결할 수 없습니다.");
         }
 
         NPCConversation next = conversationRepository.findById(nextId)
@@ -146,7 +151,7 @@ public class NpcConversationService {
 
     private NPCConversation getOwnedNpc(Long npcId, Long professorId) {
         return conversationRepository
-                .findByIdAndProfessorUserId(npcId, professorId)
+                .findByNpcIdAndProfessorUserId(npcId, professorId)
                 .orElseThrow(() -> new IllegalArgumentException("NPC 대화 없음 또는 권한 없음"));
     }
 
@@ -162,7 +167,7 @@ public class NpcConversationService {
         if (npc.getAnswers() != null) npc.getAnswers().size();
 
         return NPCConversationResponseDTO.builder()
-                .id(npc.getId())
+                .id(npc.getNpcId())
                 .professorId(npc.getProfessor().getUserId())
                 .lectureId(npc.getLecture().getLectureId())
                 .lectureTitle(npc.getLecture().getTitle())
@@ -178,6 +183,23 @@ public class NpcConversationService {
                 .nextConversationId(npc.getNextConversationId())
                 .active(npc.isActive())
                 .build();
+    }
+
+    private boolean isCircularReference(Long currentId, Long nextId) {
+        if (currentId == null) return false;
+
+        Long targetNextId = nextId;
+
+        while(targetNextId != null) {
+            if(targetNextId.equals(currentId)) {
+                return true;
+            }
+
+            targetNextId = conversationRepository.findById(targetNextId)
+                    .map(NPCConversation::getNextConversationId)
+                    .orElse(null);
+        }
+        return false;
     }
 
 }
