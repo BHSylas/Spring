@@ -4,6 +4,8 @@ import com.example.spring.entity.Country;
 import com.example.spring.entity.Level;
 import com.example.spring.entity.NPCConversation;
 import com.example.spring.entity.Place;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -13,7 +15,7 @@ import java.util.Optional;
 
 public interface NpcConversationRepository extends JpaRepository<NPCConversation, Long> {
 
-    Optional<NPCConversation> findByIdAndProfessorUserId(Long id, Long professorId);
+    Optional<NPCConversation> findByNpcIdAndProfessorUserId(Long npcId, Long professorId);
 
     @Query("""
         select n from NPCConversation n where n.professor.userId = :professorId
@@ -22,10 +24,11 @@ public interface NpcConversationRepository extends JpaRepository<NPCConversation
                 AND (:place IS NULL or n.place = :place)
                 AND n.active = true
         """)
-    List<NPCConversation> findByProfessorWithFilter(@Param("professorId") Long professorId,
+    Page<NPCConversation> findByProfessorWithFilter(@Param("professorId") Long professorId,
                                                     @Param("country") Country country,
                                                     @Param("level") Level level,
-                                                    @Param("place") Place place);
+                                                    @Param("place") Place place,
+                                                    Pageable pageable);
 
     @Query("""
         select n from NPCConversation n where  n.lecture.lectureId = :lectureId

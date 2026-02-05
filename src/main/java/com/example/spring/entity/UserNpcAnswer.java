@@ -15,7 +15,8 @@ import java.time.LocalDateTime;
 public class UserNpcAnswer {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "user_answer_id")
+    private Long userAnswerId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)

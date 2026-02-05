@@ -6,12 +6,13 @@ import com.example.spring.entity.BoardType;
 import com.example.spring.service.BoardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -36,10 +37,20 @@ public class BoardController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping("/list")
-    public ResponseEntity<List<BoardResponseDTO>> boardList(@RequestBody BoardRequestDTO boardRequestDTO) {
-        return ResponseEntity.ok(boardService.boardList(boardRequestDTO.getBoardType(), boardRequestDTO.getLectureId()));
+//    @GetMapping("/list")
+//    public ResponseEntity<List<BoardResponseDTO>> boardList(@RequestBody BoardRequestDTO boardRequestDTO) {
+//        return ResponseEntity.ok(boardService.boardList(boardRequestDTO.getBoardType(), boardRequestDTO.getLectureId()));
+//    }
 
+    @GetMapping("/searchBoard")
+    public ResponseEntity<Page<BoardResponseDTO>> searchBoard(@RequestParam(required = false) BoardType boardType,
+                                                              @RequestParam(required = false) Long lectureId,
+                                                              @RequestParam(required = false) String writer,
+                                                              @RequestParam(required = false) String title,
+                                                              @RequestParam(defaultValue = "0") int page,
+                                                              @RequestParam(defaultValue = "10") int size){
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("pinned"), Sort.Order.desc("createdAt")));
+        return ResponseEntity.ok(boardService.searchBoard(boardType, lectureId, writer, title, pageable));
     }
 
     @GetMapping("/list/{boardId}")

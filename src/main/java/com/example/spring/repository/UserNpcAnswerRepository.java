@@ -6,15 +6,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
 public interface UserNpcAnswerRepository extends JpaRepository<UserNpcAnswer, Long> {
-    Optional<UserNpcAnswer> findByUserUserIdAndNpcConversationId(Long userId, Long npcId);
 
     Optional<UserNpcAnswer> findByUserUserIdAndNpcConversation(Long userId, NPCConversation npc);
 
     long countByUserUserIdAndCountryAndLevel(Long userId, Country country, Level level);
 
     long countByUserUserIdAndCountryAndLevelAndCorrectTrue(Long userId, Country country, Level level);
-
-    long countByNpcConversation_Professor_UserIdAndCountryAndLevel(Long professorId, Country country, Level level);
 
     long countByNpcConversation_Professor_UserIdAndCountryAndLevelAndCorrectTrue(
             Long professorId, Country country, Level level);
@@ -23,6 +20,5 @@ public interface UserNpcAnswerRepository extends JpaRepository<UserNpcAnswer, Lo
 
     long countByCountryAndLevelAndCorrectTrue(Country country, Level level);
 
-    Optional<UserNpcAnswer> findTopByUserAndNpcConversationOrderByAnsweredAtDesc(User user, NPCConversation npcConversation);
-    int countByUserAndNpcConversation(User user, NPCConversation npc);
+
 }
