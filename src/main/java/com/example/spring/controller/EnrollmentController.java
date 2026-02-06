@@ -33,12 +33,12 @@ public class EnrollmentController {
     public Page<MyEnrollmentItemDTO> listMyEnrollments(
             Authentication authentication,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "ALL") String status,
+            @RequestParam(defaultValue = "recent") String sort
     ) {
         Long userId = CurrentUser.getUserId(authentication);
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "lastAccessedAt")
-                .and(Sort.by(Sort.Direction.DESC, "enrollmentId")));
-        return enrollmentService.listMyEnrollments(userId, pageable);
+        return enrollmentService.listMyEnrollments(userId, status, sort, page, size);
     }
 
     // 내 수강 정보 조회
@@ -56,5 +56,13 @@ public class EnrollmentController {
                                              @RequestBody @Valid ProgressUpdateRequestDTO req) {
         Long userId = CurrentUser.getUserId(authentication);
         return enrollmentService.updateProgress(userId, lectureId, req);
+    }
+
+    // 수강 취소(status=CANCELED 처리)
+    @DeleteMapping("/{lectureId}")
+    public EnrollmentResponseDTO cancelEnrollment(Authentication authentication,
+                                                  @PathVariable Long lectureId) {
+        Long userId = CurrentUser.getUserId(authentication);
+        return enrollmentService.cancelEnrollment(userId, lectureId);
     }
 }

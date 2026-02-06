@@ -31,6 +31,8 @@ app:
   cookie:
     secure: ${COOKIE_SECURE:false}
     same-site: ${COOKIE_SAMESITE:Lax}
+  security:
+    allowed-origins: [ "http://localhost:5173" ]
   upload:
     base-dir: uploads
     max-file-mb: 1024

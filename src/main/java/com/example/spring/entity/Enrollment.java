@@ -8,13 +8,15 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@Builder
 @Table(
         name = "enrollments",
         uniqueConstraints = {
                 @UniqueConstraint(name = "uk_user_lecture", columnNames = {"user_id", "lecture_id"})
         },
         indexes = {
-                @Index(name = "idx_enroll_user", columnList = "user_id"),
+                @Index(name = "idx_enroll_user_status", columnList = "user_id, status"),
                 @Index(name = "idx_enroll_lecture", columnList = "lecture_id"),
                 @Index(name = "idx_enroll_status", columnList = "status")
         }
@@ -56,11 +58,15 @@ public class Enrollment {
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
+    // 취소 시각
+    @Column(name = "canceled_at")
+    private LocalDateTime canceledAt;
+
     // 마지막 시청 위치(초)
     @Column(name = "last_watched_time", nullable = false)
     private int lastWatchedTime;
 
-    // 영상 길이(초) - 유튜브/업로드 메타에서 받아서 저장(없으면 0)
+    // 영상 길이(초)
     @Column(name = "total_duration", nullable = false)
     private int totalDuration;
 
@@ -93,7 +99,34 @@ public class Enrollment {
         if (this.totalDuration < 0) this.totalDuration = 0;
     }
 
+    /** 수강 취소(soft cancel) */
+    public void cancel() {
+        if (this.status == EnrollmentStatus.CANCELED) return;
+        this.status = EnrollmentStatus.CANCELED;
+        this.canceledAt = LocalDateTime.now();
+
+        // 취소면 완료는 무효 처리
+        this.completedAt = null;
+    }
+
+    // 재수강
+    public void reactivateAndReset() {
+        this.status = EnrollmentStatus.NOT_STARTED;
+        this.progressRate = 0;
+        this.lastWatchedTime = 0;
+        this.totalDuration = Math.max(0, this.totalDuration);
+        this.lastAccessedAt = LocalDateTime.now();
+        this.completedAt = null;
+        this.canceledAt = null;
+    }
+
+    // 진도 업데이트
     public void updateVideoProgress(int progress, int lastWatchedTime, int totalDuration) {
+        // 취소된 수강은 업데이트 불가
+        if (this.status == EnrollmentStatus.CANCELED) {
+            throw new IllegalStateException("취소된 수강은 진도를 업데이트할 수 없습니다.");
+        }
+
         int newProgress = Math.max(0, Math.min(progress, 100));
 
         // 진도 감소 방지

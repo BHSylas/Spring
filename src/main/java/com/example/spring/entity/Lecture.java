@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
         indexes = {
                 @Index(name = "idx_lectures_professor", columnList = "professor_id"),
                 @Index(name = "idx_lectures_status", columnList = "status"),
+                @Index(name = "idx_lectures_status_lang", columnList = "status, language"),
                 @Index(name = "idx_lectures_approved_by", columnList = "approved_by")
         }
 )
