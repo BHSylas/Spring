@@ -51,7 +51,7 @@ public class NPCConversationController {
                                                                  @RequestParam(defaultValue = "0") int page,
                                                                  @RequestParam(defaultValue = "10") int size){
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Pageable pageable = PageRequest.of(page, size, Sort.by("npcId").descending());
         return ResponseEntity.ok(npcConversationService.list(professorId,country,place, level,pageable));
     }
 
