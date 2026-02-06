@@ -76,11 +76,6 @@ public class LectureService {
                 parseLectureStatus(status, "status 값이 올바르지 않습니다. (ALL, PENDING, APPROVED, REJECTED)"),
                 pageable
         );
-    }
-    @Transactional
-    public Page<LectureResponseDTO> listApprovedWithFilters(Long currentUserId, String language, Boolean enrolling, Pageable pageable) {
-        boolean allLang = (language == null || language.isBlank() || "ALL".equalsIgnoreCase(language));
-
         return page.map(this::toLectureResponse);
     }
 
