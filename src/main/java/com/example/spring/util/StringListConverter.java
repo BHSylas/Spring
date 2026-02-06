@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 public class StringListConverter implements AttributeConverter<List<String>, String> {
 
     private static final String DELIMITER = ",";
+    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     public String convertToDatabaseColumn(List<String> attribute) {
