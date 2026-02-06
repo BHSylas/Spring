@@ -25,7 +25,7 @@ public class AnswerSubmitService {
     private final UserNpcAnswerRepository userNpcAnswerRepository;
     private final UserRepository userRepository;
 
-    public AnswerSubmitResponseDTO answerSubmit(Long userId, Long npcConversationId, List<String> userAnswer) {
+    public AnswerSubmitResponseDTO answerSubmit(Long userId, Long npcConversationId, String userAnswer) {
         NPCConversation npc = npcConversationRepository.findById(npcConversationId).orElseThrow(()
         -> new IllegalArgumentException("NPC 대화 없음"));
 
@@ -93,22 +93,24 @@ public class AnswerSubmitService {
 
     }
 
-    private boolean checkAnswer(NPCConversation npc, List<String> userAnswer) {
+    private boolean checkAnswer(NPCConversation npc, String userAnswer) {
 
         // 초급 / 중급 / 고급 공통 처리
         List<String> correct = npc.getAnswers();
 
-        if (npc.getLevel() == Level.BEGINNER) {
-            return correct.contains(userAnswer.get(0));
-        }
+//        if (npc.getLevel() == Level.BEGINNER) {
+//            return correct.contains(userAnswer);
+//        }
+//
+//        if (npc.getLevel() == Level.INTERMEDIATE) {
+//            return String.join(" ", correct)
+//                    .equalsIgnoreCase(String.join(" ", userAnswer));
+//        }
+//
+//        // 고급
+//        return String.join(" ", correct)
+//                .equalsIgnoreCase(String.join(" ", userAnswer).trim());
 
-        if (npc.getLevel() == Level.INTERMEDIATE) {
-            return String.join(" ", correct)
-                    .equalsIgnoreCase(String.join(" ", userAnswer));
-        }
-
-        // 고급
-        return String.join(" ", correct)
-                .equalsIgnoreCase(String.join(" ", userAnswer).trim());
+        return correct.contains(userAnswer);
     }
 }
