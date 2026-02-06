@@ -66,7 +66,7 @@ public class LectureService {
      * 교수: 본인 강의 목록 (status=ALL이면 전체)
      */
     public Page<LectureResponseDTO> listMyLectures(Long currentUserId, String status, Pageable pageable) {
-        requireProfessorUser(currentUserId); // 역할만 확인하면 충분
+        requireProfessorUser(currentUserId);
 
         boolean all = isAll(status);
         Page<Lecture> page = all
