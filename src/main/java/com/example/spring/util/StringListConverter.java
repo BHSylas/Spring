@@ -9,13 +9,14 @@ import tools.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.List;
 import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Converter
 public class StringListConverter implements AttributeConverter<List<String>, String> {
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private static final String DELIMITER = ",";
 
-    // List<String> -> String (DB에 저장)
     @Override
     public String convertToDatabaseColumn(List<String> attribute) {
         if (attribute == null || attribute.isEmpty()) {
@@ -29,10 +30,9 @@ public class StringListConverter implements AttributeConverter<List<String>, Str
         }
     }
 
-    // String (DB에서 읽음) -> List<String>
     @Override
     public List<String> convertToEntityAttribute(String dbData) {
-        if (dbData == null || dbData.isEmpty()) {
+        if (dbData == null || dbData.isBlank()) {
             return Collections.emptyList();
         }
         // JSON 문자열을 Java List로 역직렬화
