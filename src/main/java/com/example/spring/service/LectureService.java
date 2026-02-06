@@ -76,7 +76,6 @@ public class LectureService {
                 parseLectureStatus(status, "status 값이 올바르지 않습니다. (ALL, PENDING, APPROVED, REJECTED)"),
                 pageable
         );
-
         return page.map(this::toLectureResponse);
     }
 
