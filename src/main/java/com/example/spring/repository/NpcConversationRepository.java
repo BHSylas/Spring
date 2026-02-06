@@ -19,7 +19,7 @@ public interface NpcConversationRepository extends JpaRepository<NPCConversation
 
     @Query("""
         select n from NPCConversation n where n.professor.userId = :professorId
-                AND (:contry is null or n.country = :country)
+                AND (:country is null or n.country = :country)
                 AND (:level IS NULL or n.level = :level)
                 AND (:place IS NULL or n.place = :place)
                 AND n.active = true
@@ -36,7 +36,7 @@ public interface NpcConversationRepository extends JpaRepository<NPCConversation
                 AND n.place = :place
                 AND n.level = :level
                 AND n.active = true
-                AND n.id <> : currentNpcId
+                AND n.npcId <> : currentNpcId
         """)
     List<NPCConversation> findNextCandidate(Long lectureId, Country country,Place place, Level level,
              Long currentNpdId);
