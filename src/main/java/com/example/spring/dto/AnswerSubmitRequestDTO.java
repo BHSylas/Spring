@@ -10,5 +10,5 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AnswerSubmitRequestDTO {
-    private List<String> userAnswer;
+    private String userAnswer;
 }
