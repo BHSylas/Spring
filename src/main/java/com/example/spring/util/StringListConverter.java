@@ -22,7 +22,11 @@ public class StringListConverter implements AttributeConverter<List<String>, Str
             return null;
         }
         // Java List를 JSON 문자열로 직렬화
-        return objectMapper.writeValueAsString(attribute);
+        try {
+            return objectMapper.writeValueAsString(attribute);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("List<String> JSON 변환 실패", e);
+        }
     }
 
     // String (DB에서 읽음) -> List<String>
@@ -32,6 +36,13 @@ public class StringListConverter implements AttributeConverter<List<String>, Str
             return Collections.emptyList();
         }
         // JSON 문자열을 Java List로 역직렬화
-        return objectMapper.readValue(dbData, new TypeReference<List<String>>() {});
+        try {
+            return objectMapper.readValue(
+                    dbData,
+                    new TypeReference<List<String>>() {}
+            );
+        } catch (Exception e) {
+            throw new IllegalArgumentException("JSON → List<String> 변환 실패", e);
+        }
     }
 }
