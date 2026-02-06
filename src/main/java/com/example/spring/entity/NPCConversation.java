@@ -1,5 +1,6 @@
 package com.example.spring.entity;
 
+import com.example.spring.util.StringListConverter;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -11,10 +12,12 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Table(name = "NPCConversation")
 public class NPCConversation {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "npc_id")
+    private Long npcId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name= "lecture_id", nullable = false)
@@ -40,17 +43,22 @@ public class NPCConversation {
     private String question;
 
     // 초급: 선택지 / 중급: 단어 리스트
-    @ElementCollection
+    @Lob
+    @Column(name = "options", columnDefinition = "TEXT")
+    @Convert(converter = StringListConverter.class)
     private List<String> options;
 
-    @ElementCollection
+    @Lob
+    @Column(name = "answers", columnDefinition = "TEXT", nullable = false)
+    @Convert(converter = StringListConverter.class)
     private List<String> answers;
 
-    @Column(length = 500)
+    @Column(length = 1000, nullable = false)
     private String explanation;
 
     private boolean active;
 
+    @Column(nullable = false)
     private String topic;
     private Long nextConversationId;
 

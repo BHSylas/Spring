@@ -1,32 +1,46 @@
 package com.example.spring.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
-
+@Table(indexes = {@Index(name = "idx_user_npc", columnList = "user_id, conversation_id"),
+@Index(name = "idx_stat", columnList = "country, level, place")})
 @Entity
 @Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserNpcAnswer {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "user_answer_id")
+    private Long userAnswerId;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "conversation_id", nullable = false)
+    private NPCConversation npcConversation;
 
-    private Long conversationId;
+    @Enumerated(EnumType.STRING)
+    private Country country;
 
-    @Column(length = 500)
-    private String answer;
+    @Enumerated(EnumType.STRING)
+    private Level level;
+
+    @Enumerated(EnumType.STRING)
+    private Place place;
+
+    private int attempts;
 
     private boolean correct;
 
+    private boolean locked;
+
     private LocalDateTime answeredAt;
+
 }
