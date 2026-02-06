@@ -7,7 +7,6 @@ import com.example.spring.common.exception.ForbiddenException;
 import com.example.spring.common.exception.NotFoundException;
 import com.example.spring.repository.EnrollmentRepository;
 import com.example.spring.repository.LectureVideoRepository;
-import com.example.spring.repository.UserRepository;
 import com.example.spring.security.CurrentUser;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -27,33 +26,22 @@ import java.util.List;
 @RequestMapping("/api/videos")
 public class VideoStreamController {
 
-    private static final long CHUNK_SIZE = 1024 * 1024; // 1MB
-
     private final LectureVideoRepository lectureVideoRepository;
-    private final UserRepository userRepository;
     private final EnrollmentRepository enrollmentRepository;
     private final Path baseDir;
     private final long chunkSize;
 
     public VideoStreamController(
             LectureVideoRepository lectureVideoRepository,
-            UserRepository userRepository,
             EnrollmentRepository enrollmentRepository,
             AppProperties props
     ) {
         this.lectureVideoRepository = lectureVideoRepository;
-        this.userRepository = userRepository;
         this.enrollmentRepository = enrollmentRepository;
         this.baseDir = Paths.get(props.getUpload().getBaseDir()).toAbsolutePath().normalize();
         this.chunkSize = props.getUpload().getChunkSizeBytes();
     }
 
-    /**
-     * 업로드 영상 스트리밍
-     * - ADMIN: 모두 가능
-     * - PROFESSOR: 본인 강의만 가능
-     * - USER: 수강(Enrollment)한 강의만 가능
-     */
     @GetMapping("/{videoId}")
     public ResponseEntity<?> stream(
             Authentication authentication,
@@ -62,10 +50,8 @@ public class VideoStreamController {
     ) {
         Long userId = CurrentUser.getUserId(authentication);
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException("사용자를 찾을 수 없습니다."));
-
-        LectureVideo video = lectureVideoRepository.findById(videoId)
+        // lecture/professor까지 한번에 로딩
+        LectureVideo video = lectureVideoRepository.findWithLectureAndProfessorByVideoId(videoId)
                 .orElseThrow(() -> new NotFoundException("비디오를 찾을 수 없습니다."));
 
         if (video.getSourceType() != VideoSourceType.UPLOAD) {
@@ -77,10 +63,9 @@ public class VideoStreamController {
             throw new NotFoundException("비디오에 연결된 강의를 찾을 수 없습니다.");
         }
 
-        // 권한 체크
-        authorizeVideoAccess(user, lecture);
+        // 권한 체크(토큰 authority 사용 + exists 쿼리)
+        authorizeVideoAccess(authentication, userId, lecture);
 
-        // 파일 경로 resolve + 스트리밍
         String localPath = video.getLocalPath();
         if (!StringUtils.hasText(localPath)) {
             throw new NotFoundException("서버에 저장된 파일 경로가 없습니다.");
@@ -89,7 +74,6 @@ public class VideoStreamController {
         String relative = localPath.startsWith("/") ? localPath.substring(1) : localPath;
         Path filePath = baseDir.resolve(relative).normalize();
 
-        // 경로 조작 방지
         if (!filePath.startsWith(baseDir)) {
             throw new BadRequestException("잘못된 파일 경로입니다.");
         }
@@ -103,7 +87,6 @@ public class VideoStreamController {
 
         List<HttpRange> ranges = headers.getRange();
         if (ranges == null || ranges.isEmpty()) {
-            // Range 요청이 없으면 전체 반환(200)
             return ResponseEntity.ok()
                     .contentType(mediaType)
                     .contentLength(contentLength)
@@ -111,7 +94,6 @@ public class VideoStreamController {
                     .body(resource);
         }
 
-        // Range 요청(대부분 1개)
         HttpRange range = ranges.get(0);
         long start = range.getRangeStart(contentLength);
         long end = range.getRangeEnd(contentLength);
@@ -125,34 +107,40 @@ public class VideoStreamController {
                 .body(region);
     }
 
-    private void authorizeVideoAccess(User user, Lecture lecture) {
-        UserRole role = UserRole.fromCode(user.getUserRole());
+    private void authorizeVideoAccess(Authentication authentication, Long userId, Lecture lecture) {
+        boolean isAdmin = hasRole(authentication, "ROLE_ADMIN");
+        boolean isProfessor = hasRole(authentication, "ROLE_PROFESSOR");
+        boolean isUser = hasRole(authentication, "ROLE_USER");
 
-        // ADMIN: 전부 OK
-        if (role == UserRole.ADMIN) return;
+        if (isAdmin) return;
 
-        // PROFESSOR: 본인 강의만 OK
-        if (role == UserRole.PROFESSOR) {
+        if (isProfessor) {
             if (lecture.getProfessor() == null || lecture.getProfessor().getUserId() == null) {
                 throw new ForbiddenException("강의 교수 정보가 없어 접근할 수 없습니다.");
             }
-            if (!lecture.getProfessor().getUserId().equals(user.getUserId())) {
+            if (!lecture.getProfessor().getUserId().equals(userId)) {
                 throw new ForbiddenException("본인 강의 영상만 접근할 수 있습니다.");
             }
             return;
         }
 
-        // USER(학생): 수강 신청한 강의만 OK
+        if (!isUser) {
+            throw new ForbiddenException("접근 권한이 없습니다.");
+        }
+
         boolean enrolled = enrollmentRepository.existsByUser_UserIdAndLecture_LectureId(
-                user.getUserId(),
+                userId,
                 lecture.getLectureId()
         );
         if (!enrolled) {
             throw new ForbiddenException("수강 신청한 강의만 영상을 볼 수 있습니다.");
         }
+    }
 
-        // (선택) 승인된 강의만 보여주고 싶으면 아래 추가 가능
-        // if (lecture.getStatus() != LectureStatus.APPROVED) throw new ForbiddenException("승인된 강의만 접근 가능합니다.");
+    private boolean hasRole(Authentication authentication, String role) {
+        if (authentication == null || authentication.getAuthorities() == null) return false;
+        return authentication.getAuthorities().stream()
+                .anyMatch(a -> role.equals(a.getAuthority()));
     }
 
     private Resource toResource(Path filePath) {

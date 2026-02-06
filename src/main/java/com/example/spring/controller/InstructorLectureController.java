@@ -25,6 +25,22 @@ public class InstructorLectureController {
     private final LectureService lectureService;
     private final EnrollmentService enrollmentService;
 
+    /**
+     * 교수: 내 강의 목록
+     * - status=ALL이면 전체
+     * - 기본 정렬: 최신(lectureId desc)
+     */
+    @GetMapping
+    public Page<LectureResponseDTO> listMyLectures(
+            Authentication authentication,
+            @RequestParam(defaultValue = "ALL") String status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Long userId = CurrentUser.getUserId(authentication);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "lectureId"));
+        return lectureService.listMyLectures(userId, status, pageable);
+    }
 
     @PostMapping
     public LectureResponseDTO create(Authentication authentication, @RequestBody @Valid LectureCreateRequestDTO req) {
@@ -77,5 +93,12 @@ public class InstructorLectureController {
                         .and(Sort.by(Sort.Direction.DESC, "enrollmentId"))
         );
         return enrollmentService.listLectureStudents(userId, lectureId, status, pageable);
+    }
+
+    @GetMapping("/{lectureId}/stats")
+    public InstructorLectureStatsDTO stats(Authentication authentication,
+                                           @PathVariable Long lectureId) {
+        Long userId = CurrentUser.getUserId(authentication);
+        return lectureService.getLectureStats(userId, lectureId);
     }
 }

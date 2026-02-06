@@ -1,5 +1,6 @@
 package com.example.spring.security;
 
+import com.example.spring.config.AppProperties;
 import org.springframework.context.annotation.*;
 import org.springframework.security.authentication.*;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -15,56 +16,71 @@ import org.springframework.web.cors.*;
 import java.util.List;
 
 @Configuration
-@EnableMethodSecurity(prePostEnabled = true) // @PreAuthorize 활성화
+@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
+    private final OriginCsrfFilter originCsrfFilter;
+    private final AppProperties props;
 
-    public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter,
+                          OriginCsrfFilter originCsrfFilter,
+                          AppProperties props) {
         this.jwtAuthFilter = jwtAuthFilter;
+        this.originCsrfFilter = originCsrfFilter;
+        this.props = props;
     }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                //CORS 활성화
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-
                 .csrf(csrf -> csrf.disable())
-                .sessionManagement(sm ->
-                        sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
+                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // preflight 요청 허용
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/api/auth/**", "/api/lectures/**").permitAll()
 
-                        // URL 레벨 1차 방어
+                        // auth는 필요한 것만 공개
+                        .requestMatchers(
+                                "/api/auth/signup",
+                                "/api/auth/login",
+                                "/api/auth/refresh"
+                        ).permitAll()
+
+                        // 공개 강의 목록/상세는 비회원도 조회 가능
+                        .requestMatchers("/api/lectures/**").permitAll()
+
+                        .requestMatchers("/api/professor/**").hasRole("PROFESSOR")
+                        .requestMatchers("/api/videos/**").hasAnyRole("USER", "PROFESSOR", "ADMIN")
+
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/instructor/**").hasAnyRole("PROFESSOR", "ADMIN")
                         .requestMatchers("/api/me/**").hasAnyRole("USER", "ADMIN")
 
                         .anyRequest().authenticated()
                 )
+                // 쿠키 기반 엔드포인트 CSRF 완화(Origin/Referer 검사)
+                .addFilterBefore(originCsrfFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    //React dev server 허용
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        config.setAllowedOrigins(List.of("http://localhost:5173"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        List<String> allowed = props.getSecurity().getAllowedOrigins();
+        config.setAllowedOrigins(allowed == null || allowed.isEmpty()
+                ? List.of("http://localhost:5173")
+                : allowed);
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
+        config.setExposedHeaders(List.of("Authorization"));
 
-        UrlBasedCorsConfigurationSource source =
-                new UrlBasedCorsConfigurationSource();
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
-
         return source;
     }
 
@@ -74,9 +90,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration config
-    ) throws Exception {
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
 }

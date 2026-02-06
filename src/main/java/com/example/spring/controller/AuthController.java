@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+
     public AuthController(AuthService authService) {
         this.authService = authService;
     }
@@ -52,18 +53,28 @@ public class AuthController {
             throw new UnauthorizedException("refresh 토큰이 없습니다.");
         }
 
-        TokenPairDTO tokens = authService.refresh(refreshToken);
+        try {
+            TokenPairDTO tokens = authService.refresh(refreshToken);
+            setRefreshCookie(res, tokens.getRefreshToken());
 
-        // 로테이션된 새 refreshToken을 다시 쿠키로
-        setRefreshCookie(res, tokens.getRefreshToken());
-
-        return ResponseEntity.ok(
-                new AuthResponseDTO(tokens.getAccessToken(), tokens.getUserNickname(), tokens.getUserName())
-        );
+            return ResponseEntity.ok(
+                    new AuthResponseDTO(tokens.getAccessToken(), tokens.getUserNickname(), tokens.getUserName())
+            );
+        } catch (com.example.spring.common.exception.RefreshReplayDetectedException e) {
+            // 리플레이 감지 → 쿠키도 지워서 클라이언트 상태를 깔끔히 정리
+            clearRefreshCookie(res);
+            throw e;
+        }
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(HttpServletResponse res) {
+    public ResponseEntity<Void> logout(
+            @CookieValue(name="refreshToken", required=false) String refreshToken,
+            HttpServletResponse res
+    ){
+        if (refreshToken != null && !refreshToken.isBlank()) {
+            authService.logout(refreshToken); // DB revoke
+        }
         clearRefreshCookie(res);
         return ResponseEntity.noContent().build();
     }
@@ -80,12 +91,17 @@ public class AuthController {
     @Value("${app.cookie.same-site}")
     private String cookieSameSite;
 
+    @Value("${jwt.refresh-token-exp-days}")
+    private int refreshTokenExpDays;
+
     private void setRefreshCookie(HttpServletResponse res, String refreshToken) {
+        long maxAgeSeconds = (long) refreshTokenExpDays * 24 * 60 * 60;
+
         ResponseCookie cookie = ResponseCookie.from("refreshToken", refreshToken)
                 .httpOnly(true)
                 .secure(cookieSecure)
                 .path("/")
-                .maxAge(14 * 24 * 60 * 60)
+                .maxAge(maxAgeSeconds)
                 .sameSite(cookieSameSite)
                 .build();
 
@@ -96,10 +112,10 @@ public class AuthController {
     private void clearRefreshCookie(HttpServletResponse res) {
         ResponseCookie cookie = ResponseCookie.from("refreshToken", "")
                 .httpOnly(true)
-                .secure(false)
+                .secure(cookieSecure)
                 .path("/")
                 .maxAge(0)
-                .sameSite("Lax")
+                .sameSite(cookieSameSite)
                 .build();
 
         res.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());

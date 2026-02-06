@@ -17,8 +17,29 @@ import java.util.List;
 @ConfigurationProperties(prefix = "app")
 public class AppProperties {
 
+    private final Cookie cookie = new Cookie();
+    private final Security security = new Security();
+
     private final Upload upload = new Upload();
     private final Youtube youtube = new Youtube();
+
+    @Getter @Setter
+    public static class Cookie {
+        /** HTTPS 환경에서만 쿠키 전송 여부 */
+        private boolean secure = false;
+
+        /** SameSite 정책 (Lax/Strict/None) */
+        private String sameSite = "Lax";
+    }
+
+    @Getter @Setter
+    public static class Security {
+        /**
+         * 쿠키 기반 요청(/api/auth/refresh, /api/auth/logout)의 Origin/Referer 허용 목록
+         * - CSRF 완화용(브라우저가 자동으로 쿠키를 보내는 것을 악용하는 시나리오 차단)
+         */
+        private List<String> allowedOrigins = new ArrayList<>(List.of("http://localhost:5173"));
+    }
 
     @Getter @Setter
     public static class Upload {
