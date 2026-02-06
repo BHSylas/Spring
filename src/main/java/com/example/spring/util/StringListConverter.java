@@ -1,9 +1,13 @@
 package com.example.spring.util;
 
+
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
-import java.util.Arrays;
+import java.io.IOException;
+import java.util.List;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -18,9 +22,12 @@ public class StringListConverter implements AttributeConverter<List<String>, Str
         if (attribute == null || attribute.isEmpty()) {
             return null;
         }
-        return attribute.stream()
-                .map(this::escape)
-                .collect(Collectors.joining(DELIMITER));
+        // Java List를 JSON 문자열로 직렬화
+        try {
+            return objectMapper.writeValueAsString(attribute);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("List<String> JSON 변환 실패", e);
+        }
     }
 
     @Override
@@ -28,16 +35,14 @@ public class StringListConverter implements AttributeConverter<List<String>, Str
         if (dbData == null || dbData.isBlank()) {
             return Collections.emptyList();
         }
-        return Arrays.stream(dbData.split(DELIMITER, -1))
-                .map(this::unescape)
-                .toList();
-    }
-
-    private String escape(String value) {
-        return value.replace("\\", "\\\\").replace(",", "\\,");
-    }
-
-    private String unescape(String value) {
-        return value.replace("\\,", ",").replace("\\\\", "\\");
+        // JSON 문자열을 Java List로 역직렬화
+        try {
+            return objectMapper.readValue(
+                    dbData,
+                    new TypeReference<List<String>>() {}
+            );
+        } catch (Exception e) {
+            throw new IllegalArgumentException("JSON → List<String> 변환 실패", e);
+        }
     }
 }
