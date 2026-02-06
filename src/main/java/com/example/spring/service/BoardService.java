@@ -59,6 +59,7 @@ public class BoardService {
                 .build();
 
         boardRepository.save(board);
+
         return board.getBoardId();
 
     }

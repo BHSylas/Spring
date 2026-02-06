@@ -1,9 +1,11 @@
 package com.example.spring.util;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Collections;
@@ -19,13 +21,8 @@ public class StringListConverter implements AttributeConverter<List<String>, Str
         if (attribute == null || attribute.isEmpty()) {
             return null;
         }
-        try {
-            // Java List를 JSON 문자열로 직렬화
-            return objectMapper.writeValueAsString(attribute);
-        } catch (IOException e) {
-            // 직렬화 실패 시 예외 처리
-            throw new RuntimeException("JSON serialization error", e);
-        }
+        // Java List를 JSON 문자열로 직렬화
+        return objectMapper.writeValueAsString(attribute);
     }
 
     // String (DB에서 읽음) -> List<String>
@@ -34,12 +31,7 @@ public class StringListConverter implements AttributeConverter<List<String>, Str
         if (dbData == null || dbData.isEmpty()) {
             return Collections.emptyList();
         }
-        try {
-            // JSON 문자열을 Java List로 역직렬화
-            return objectMapper.readValue(dbData, new TypeReference<List<String>>() {});
-        } catch (IOException e) {
-            // 역직렬화 실패 시 예외 처리
-            throw new RuntimeException("JSON deserialization error", e);
-        }
+        // JSON 문자열을 Java List로 역직렬화
+        return objectMapper.readValue(dbData, new TypeReference<List<String>>() {});
     }
 }

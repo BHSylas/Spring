@@ -31,6 +31,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'com.mysql:mysql-connector-j:8.4.0'
     runtimeOnly 'com.mysql:mysql-connector-j:8.4.0'
 	compileOnly 'org.projectlombok:lombok'
@@ -50,9 +51,6 @@ dependencies {
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.5'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.5'
 
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.14.0'
-    implementation 'com.fasterxml.jackson.core:jackson-core:2.14.0'
-    implementation 'com.fasterxml.jackson.core:jackson-annotations:2.14.0'
 
 
 
