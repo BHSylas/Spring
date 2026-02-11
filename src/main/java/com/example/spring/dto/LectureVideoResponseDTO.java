@@ -24,5 +24,6 @@ public class LectureVideoResponseDTO {
     // youtube
     private String youtubeVideoId;
     private String youtubeUrl;
+    private String youtubeVideoTitle;
     private String youtubeChannelTitle;
 }

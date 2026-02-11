@@ -68,6 +68,9 @@ public class LectureVideo {
     @Column(name = "youtube_url", length = 300)
     private String youtubeUrl;
 
+    @Column(name = "youtube_video_title", length = 300)
+    private String youtubeVideoTitle;
+
     @Column(name = "youtube_channel_title", length = 200)
     private String youtubeChannelTitle;
 
@@ -103,6 +106,7 @@ public class LectureVideo {
             Lecture lecture,
             String youtubeVideoId,
             String youtubeUrl,
+            String youtubeVideoTitle,
             String youtubeChannelTitle,
             int durationSec,
             String thumbnailUrl
@@ -112,6 +116,7 @@ public class LectureVideo {
         v.sourceType = VideoSourceType.YOUTUBE;
         v.youtubeVideoId = youtubeVideoId;
         v.youtubeUrl = youtubeUrl;
+        v.youtubeVideoTitle = youtubeVideoTitle;
         v.youtubeChannelTitle = youtubeChannelTitle;
         v.durationSec = Math.max(0, durationSec);
         v.thumbnailUrl = thumbnailUrl;
@@ -132,8 +137,11 @@ public class LectureVideo {
         this.thumbnailUrl = thumbnailUrl;
     }
 
-    public void updateYoutubeMeta(String channelTitle, int durationSec, String thumbnailUrl) {
+    public void updateYoutubeMeta(String videoTitle, String channelTitle, int durationSec, String thumbnailUrl) {
         // 값이 없으면 기존값 유지(안정형)
+        if (videoTitle != null && !videoTitle.isBlank()) {
+            this.youtubeVideoTitle = videoTitle;
+        }
         if (channelTitle != null && !channelTitle.isBlank()) {
             this.youtubeChannelTitle = channelTitle;
         }

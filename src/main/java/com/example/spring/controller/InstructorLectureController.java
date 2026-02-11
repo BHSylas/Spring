@@ -71,6 +71,28 @@ public class InstructorLectureController {
         return lectureService.attachYoutube(userId, lectureId, req);
     }
 
+    @DeleteMapping("/{lectureId}/video")
+    public void deleteVideo(Authentication authentication, @PathVariable Long lectureId) {
+        Long userId = CurrentUser.getUserId(authentication);
+        lectureService.deleteLectureVideo(userId, lectureId);
+    }
+
+    @PutMapping(value = "/{lectureId}/video/upload", consumes = "multipart/form-data")
+    public LectureVideoResponseDTO replaceUpload(Authentication authentication,
+                                                 @PathVariable Long lectureId,
+                                                 @RequestParam("file") MultipartFile file) {
+        Long userId = CurrentUser.getUserId(authentication);
+        return lectureService.replaceLectureVideoWithUpload(userId, lectureId, file);
+    }
+
+    @PutMapping("/{lectureId}/video/youtube")
+    public LectureVideoResponseDTO replaceYoutube(Authentication authentication,
+                                                  @PathVariable Long lectureId,
+                                                  @RequestBody @Valid YoutubeAttachRequestDTO req) {
+        Long userId = CurrentUser.getUserId(authentication);
+        return lectureService.replaceLectureVideoWithYoutube(userId, lectureId, req);
+    }
+
     @PostMapping("/{lectureId}/video/youtube/refresh-meta")
     public VideoMetaRefreshResponseDTO refreshYoutubeMeta(Authentication authentication,
                                                        @PathVariable Long lectureId) {
