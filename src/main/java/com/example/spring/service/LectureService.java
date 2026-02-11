@@ -238,6 +238,7 @@ public class LectureService {
                 lecture,
                 videoId,
                 YoutubeParser.toWatchUrl(videoId),
+                meta.videoTitle(),
                 meta.channelTitle(),
                 meta.durationSec(),
                 meta.thumbnailUrl()
@@ -276,9 +277,49 @@ public class LectureService {
         }
 
         boolean updated = isYoutubeMetaChanged(video, meta);
-        video.updateYoutubeMeta(meta.channelTitle(), meta.durationSec(), meta.thumbnailUrl());
+        video.updateYoutubeMeta(meta.videoTitle(), meta.channelTitle(), meta.durationSec(), meta.thumbnailUrl());
 
         return new VideoMetaRefreshResponseDTO(updated, toVideoResponse(video));
+    }
+
+    // 영상 교체
+    @Transactional
+    public void deleteLectureVideo(Long currentUserId, Long lectureId) {
+        Lecture lecture = findLectureOrThrow(lectureId);
+        requireLectureOwner(lecture, currentUserId);
+
+        LectureVideo video = lectureVideoRepository.findByLecture_LectureId(lectureId)
+                .orElseThrow(() -> new NotFoundException("강의에 등록된 영상이 없습니다."));
+
+        deletePhysicalFileIfUpload(video);
+        lectureVideoRepository.delete(video);
+    }
+
+    @Transactional
+    public LectureVideoResponseDTO replaceLectureVideoWithUpload(Long currentUserId, Long lectureId, MultipartFile file) {
+        Lecture lecture = findLectureOrThrow(lectureId);
+        requireLectureOwner(lecture, currentUserId);
+
+        lectureVideoRepository.findByLecture_LectureId(lectureId).ifPresent(v -> {
+            deletePhysicalFileIfUpload(v);
+            lectureVideoRepository.delete(v);
+        });
+
+        // 기존 1개 정책 upload 메서드 재사용
+        return uploadLectureVideo(currentUserId, lectureId, file);
+    }
+
+    @Transactional
+    public LectureVideoResponseDTO replaceLectureVideoWithYoutube(Long currentUserId, Long lectureId, YoutubeAttachRequestDTO req) {
+        Lecture lecture = findLectureOrThrow(lectureId);
+        requireLectureOwner(lecture, currentUserId);
+
+        lectureVideoRepository.findByLecture_LectureId(lectureId).ifPresent(v -> {
+            deletePhysicalFileIfUpload(v);
+            lectureVideoRepository.delete(v);
+        });
+
+        return attachYoutube(currentUserId, lectureId, req);
     }
 
     // =========================================================
@@ -341,6 +382,17 @@ public class LectureService {
         }
     }
 
+    private void deletePhysicalFileIfUpload(LectureVideo video) {
+        if (video == null) return;
+
+        if (video.getSourceType() != VideoSourceType.UPLOAD) return;
+
+        String localPath = video.getLocalPath();
+        if (localPath == null || localPath.isBlank()) return;
+
+        localFileStorage.deleteByLocalPath(localPath);
+    }
+
     private String extractYoutubeVideoIdOrThrow(String urlOrId) {
         String videoId = YoutubeParser.extractVideoId(urlOrId);
         if (videoId == null || videoId.isBlank()) {
@@ -355,6 +407,9 @@ public class LectureService {
     }
 
     private boolean isYoutubeMetaChanged(LectureVideo video, YoutubeClient.YoutubeMeta meta) {
+        boolean titleChanged = meta.videoTitle() != null && !meta.videoTitle().isBlank()
+                && (video.getYoutubeVideoTitle() == null || !meta.videoTitle().equals(video.getYoutubeVideoTitle()));
+
         boolean channelChanged = meta.channelTitle() != null && !meta.channelTitle().isBlank()
                 && (video.getYoutubeChannelTitle() == null || !meta.channelTitle().equals(video.getYoutubeChannelTitle()));
 
@@ -363,7 +418,7 @@ public class LectureService {
         boolean thumbChanged = meta.thumbnailUrl() != null && !meta.thumbnailUrl().isBlank()
                 && (video.getThumbnailUrl() == null || !meta.thumbnailUrl().equals(video.getThumbnailUrl()));
 
-        return channelChanged || durationChanged || thumbChanged;
+        return titleChanged || channelChanged || durationChanged || thumbChanged;
     }
 
     // =========================================================
@@ -427,6 +482,7 @@ public class LectureService {
                 v.getFileSizeBytes(),
                 v.getYoutubeVideoId(),
                 v.getYoutubeUrl(),
+                v.getYoutubeVideoTitle(),
                 v.getYoutubeChannelTitle()
         );
     }

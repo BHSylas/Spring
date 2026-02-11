@@ -2,6 +2,7 @@ package com.example.spring.storage;
 
 import com.example.spring.config.AppProperties;
 import com.example.spring.common.exception.BadRequestException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -14,6 +15,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Component
 public class LocalFileStorage {
 
@@ -71,6 +73,26 @@ public class LocalFileStorage {
             );
         } catch (IOException e) {
             throw new BadRequestException("파일 저장 실패: " + e.getMessage());
+        }
+    }
+
+    public void deleteByLocalPath(String localPath) {
+        if (localPath == null || localPath.isBlank()) return;
+
+        String rel = localPath.startsWith("/") ? localPath.substring(1) : localPath;
+
+        Path base = baseDir.toAbsolutePath().normalize();
+        Path target = base.resolve(rel).toAbsolutePath().normalize();
+
+        // 보안: baseDir 밖 경로로 탈출 방지
+        if (!target.startsWith(base)) {
+            return;
+        }
+
+        try {
+            Files.deleteIfExists(target);
+        } catch (IOException e) {
+            log.warn("file delete failed: {}", target, e);
         }
     }
 

@@ -47,6 +47,7 @@ public class YoutubeClient {
             @SuppressWarnings("unchecked")
             Map<String, Object> contentDetails = (Map<String, Object>) item.get("contentDetails");
 
+            String videoTitle = snippet == null ? null : (String) snippet.get("title");
             String channelTitle = snippet == null ? null : (String) snippet.get("channelTitle");
 
             String thumb = null;
@@ -67,7 +68,7 @@ public class YoutubeClient {
                 durationSec = Iso8601Duration.toSeconds(duration);
             }
 
-            return new YoutubeMeta(channelTitle, durationSec, thumb);
+            return new YoutubeMeta(videoTitle, channelTitle, durationSec, thumb);
         } catch (Exception e) {
             return YoutubeMeta.empty();
         }
@@ -91,12 +92,12 @@ public class YoutubeClient {
         return url instanceof String s ? s : null;
     }
 
-    public record YoutubeMeta(String channelTitle, int durationSec, String thumbnailUrl) {
+    public record YoutubeMeta(String videoTitle, String channelTitle, int durationSec, String thumbnailUrl) {
         public static YoutubeMeta empty() {
-            return new YoutubeMeta(null, 0, null);
+            return new YoutubeMeta(null, null, 0, null);
         }
         public boolean isEmpty() {
-            return channelTitle == null && thumbnailUrl == null && durationSec == 0;
+            return videoTitle == null && channelTitle == null && thumbnailUrl == null && durationSec == 0;
         }
     }
 }
