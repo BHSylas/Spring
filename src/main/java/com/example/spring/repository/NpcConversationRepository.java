@@ -36,10 +36,10 @@ public interface NpcConversationRepository extends JpaRepository<NPCConversation
                 AND n.place = :place
                 AND n.level = :level
                 AND n.active = true
-                AND n.npcId <> : currentNpcId
+                AND n.npcId <> :currentNpcId
         """)
     List<NPCConversation> findNextCandidate(Long lectureId, Country country,Place place, Level level,
-             Long currentNpdId);
+             Long currentNpcId);
 
 
     long countByCountryAndLevel(Country country, Level level);
