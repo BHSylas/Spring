@@ -10,6 +10,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -62,6 +63,15 @@ public class BoardController {
     @PatchMapping("/answered/{boardId}")
     public ResponseEntity<Void> answered(@AuthenticationPrincipal Long userId, @PathVariable Long boardId) {
         boardService.markAnswered(userId, boardId);
+        return ResponseEntity.ok().build();
+    }
+
+    //관리자 공지사항 고정
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("{boardId}/pin")
+    public ResponseEntity<Void> pinNotice(@AuthenticationPrincipal Long userId, @PathVariable Long boardId,
+                                          @RequestParam boolean pinned) {
+        boardService.pinNotice(userId, boardId, pinned);
         return ResponseEntity.ok().build();
     }
 }

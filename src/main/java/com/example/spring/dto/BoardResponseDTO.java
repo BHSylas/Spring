@@ -19,6 +19,8 @@ public class BoardResponseDTO {
     private Boolean answered;
     private Boolean pinned;
     private Boolean deleted;
+    private int commentCount;
+    private int viewCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

@@ -6,10 +6,7 @@ import com.example.spring.entity.Board;
 import com.example.spring.entity.BoardType;
 import com.example.spring.entity.Lecture;
 import com.example.spring.entity.User;
-import com.example.spring.repository.BoardRepository;
-import com.example.spring.repository.EnrollmentRepository;
-import com.example.spring.repository.LectureRepository;
-import com.example.spring.repository.UserRepository;
+import com.example.spring.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -27,6 +24,7 @@ public class BoardService {
     private final UserRepository userRepository;
     private final BoardRepository boardRepository;
     private final EnrollmentRepository enrollmentRepository;
+    private final BoardCommentRepository boardCommentRepository;
 
     @Transactional
     public Long create(Long userId, BoardRequestDTO requestDTO){
@@ -121,6 +119,8 @@ public class BoardService {
     public BoardResponseDTO board(Long boardId){
         Board board = getBoard(boardId);
 
+        board.increaseViewCount();
+
         return toDTO(board);
     }
 
@@ -134,6 +134,33 @@ public class BoardService {
 
         board.setAnswered(true);
     }
+
+    //관리자 공지 고정
+    @Transactional
+    public void pinNotice(Long userId, Long boardId, boolean pinned){
+        User user = userRepository.findById(userId).orElseThrow(() ->  new IllegalArgumentException("회원 정보 없음"));
+
+        if (user.getUserRole() != 2) {
+            throw new IllegalStateException("공지 고정 권한 없음. 관리자만 가능");
+
+        }
+
+        Board board = getBoard(boardId);
+
+        if(board.getBoardType() == BoardType.NOTICE){
+            throw new IllegalStateException("공지사항만 고정 가능");
+        }
+
+        if(board.isDeleted()){
+            throw new IllegalStateException("삭제된 공지는 고정할 수 없음");
+        }
+        board.setPinned(pinned);
+        board.setUpdatedAt(LocalDateTime.now());
+
+    }
+
+
+
 
     private Board getBoard(Long boardId){
         return boardRepository.findByBoardIdAndDeletedFalse(boardId)
@@ -156,6 +183,8 @@ public class BoardService {
     }
 
     private BoardResponseDTO toDTO(Board board) {
+        long commentCount = boardCommentRepository.countByBoardBoardIdAndDeletedFalse(board.getBoardId());
+        
         return BoardResponseDTO.builder()
                 .boardId(board.getBoardId())
                 .boardType(board.getBoardType())
@@ -165,6 +194,8 @@ public class BoardService {
                 .writerName(board.getWriter().getUserNickname())
                 .answered(board.isAnswered())
                 .pinned(board.isPinned())
+                .viewCount(board.getViewCount())
+                .commentCount((int) commentCount)
                 .createdAt(board.getCreatedAt())
                 .build();
     }
