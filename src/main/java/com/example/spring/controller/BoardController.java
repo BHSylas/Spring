@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/board")
+@RequestMapping("/api/boards")
 public class BoardController {
     private final BoardService boardService;
 
@@ -58,6 +58,7 @@ public class BoardController {
         return ResponseEntity.ok(boardService.board(boardId));
     }
 
+    //QnA 답변표시
     @PatchMapping("/answered/{boardId}")
     public ResponseEntity<Void> answered(@AuthenticationPrincipal Long userId, @PathVariable Long boardId) {
         boardService.markAnswered(userId, boardId);
