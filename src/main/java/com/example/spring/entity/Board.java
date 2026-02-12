@@ -45,10 +45,26 @@ public class Board {
 
     private boolean deleted;
 
+    private int viewCount;
+
+    private int commentCount;
+
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "board", cascade = CascadeType.ALL)
     private List<BoardAnswer> answers = new ArrayList<>();
+
+    public void increaseViewCount(){
+        this.viewCount++;
+    }
+
+    public void increaseCommentCount(){
+        this.commentCount++;
+    }
+
+    public void decreaseCommentCount(){
+        this.commentCount--;
+    }
 }

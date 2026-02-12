@@ -27,10 +27,11 @@ public class AdminStatsService {
                             long correct = userNpcAnswerRepository.countByCountryAndLevelAndCorrectTrue(country, level);
 
                             double accuracy = solved == 0 ? 0.0:
-                                    (double) correct / solved * 100;
+                                    Math.round((correct / solved) * 100) ;
 
                             double officialAccuracy = totalNpc == 0 ? 0.0:
-                                    (double) correct / totalNpc * 100;
+                                    Math.round((correct / totalNpc) * 100) ;
+
 
                             return NpcStatsDTO.builder()
                                     .country(country)

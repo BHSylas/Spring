@@ -43,10 +43,11 @@ public class MyLearningStatsService {
                     long correctProblems = userNpcAnswerRepository.countByUserUserIdAndCountryAndLevelAndCorrectTrue(userId, country, level);
 
                     double officialAccuracy = totalProblems == 0 ? 0.0 :
-                            (double) correctProblems / totalProblems * 100;
+                            Math.round((correctProblems / totalProblems) * 100);
 
                     double userAccuracy = solvedProblems == 0 ? 0.0 :
-                            (double) correctProblems / solvedProblems * 100;
+                            Math.round((correctProblems / solvedProblems) * 100);
+
 
                     return LevelAccuracyDTO.builder()
                             .level(level)

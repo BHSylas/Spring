@@ -54,6 +54,7 @@ public class BoardCommentService {
                 .build();
 
         boardCommentRepository.save(boardComment);
+        board.increaseCommentCount();
     }
 
     @Transactional
@@ -78,6 +79,8 @@ public class BoardCommentService {
         BoardComment comment = boardCommentRepository.findById(commentId)
                 .orElseThrow(() -> new IllegalArgumentException("댓글 없음"));
 
+        Board board = comment.getBoard();
+
         if(!comment.getWriter().getUserId().equals(userId)) {
             throw new IllegalStateException("삭제 권한 없음");
         }
@@ -89,6 +92,7 @@ public class BoardCommentService {
         }
 
         comment.delete();
+        board.decreaseCommentCount();
     }
 
     @Transactional(readOnly = true)
