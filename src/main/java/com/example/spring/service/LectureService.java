@@ -111,7 +111,7 @@ public class LectureService {
     // =========================================================
     // 관리자: 강의 승인/반려 + 목록
     // =========================================================
-
+    @Transactional
     public Page<LectureResponseDTO> adminListLectures(Long adminUserId, String status, Pageable pageable) {
         requireAdminUser(adminUserId);
 

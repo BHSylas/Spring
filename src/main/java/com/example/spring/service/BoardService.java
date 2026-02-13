@@ -61,7 +61,7 @@ public class BoardService {
         return board.getBoardId();
 
     }
-
+    @Transactional
     public void update(Long userId, Long boardId, BoardRequestDTO requestDTO){
         Board board = getBoard(boardId);
         User user = userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("회원 정보 없음"));
@@ -77,7 +77,7 @@ public class BoardService {
             board.setPinned(requestDTO.isPinned());
         }
         board.setUpdatedAt(LocalDateTime.now());
-
+        boardRepository.save(board);
     }
 
     public void delete(Long userId, Long boardId){
@@ -89,7 +89,7 @@ public class BoardService {
         }
 
         board.setDeleted(true);
-
+        boardRepository.save(board);
     }
 
 //    @Transactional(readOnly = true)
@@ -115,7 +115,7 @@ public class BoardService {
                 .map(this::toDTO);
     }
 
-
+    @Transactional
     public BoardResponseDTO board(Long boardId){
         Board board = getBoard(boardId);
 
