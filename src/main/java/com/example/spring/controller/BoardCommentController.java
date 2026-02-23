@@ -2,6 +2,7 @@ package com.example.spring.controller;
 
 import com.example.spring.dto.BoardCommentRequestDTO;
 import com.example.spring.dto.BoardCommentResponseDTO;
+import com.example.spring.dto.MyCommentResponseDTO;
 import com.example.spring.service.BoardCommentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -48,4 +49,17 @@ public class BoardCommentController {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "createdAt"));
         return ResponseEntity.ok(boardCommentService.getComments(boardId, pageable));
     }
+
+    //내가 단 댓글 목록
+    @GetMapping("/me")
+    public ResponseEntity<Page<MyCommentResponseDTO>> getMyComments(
+            @AuthenticationPrincipal Long userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        return ResponseEntity.ok(boardCommentService.getMyComments(userId, pageable));
+    }
+
+
 }

@@ -2,10 +2,7 @@ package com.example.spring.service;
 
 import com.example.spring.dto.BoardAnswerRequestDTO;
 import com.example.spring.dto.BoardAnswerResponseDTO;
-import com.example.spring.entity.Board;
-import com.example.spring.entity.BoardAnswer;
-import com.example.spring.entity.BoardType;
-import com.example.spring.entity.User;
+import com.example.spring.entity.*;
 import com.example.spring.repository.BoardAnswerRepository;
 import com.example.spring.repository.BoardRepository;
 import com.example.spring.repository.UserRepository;
@@ -32,7 +29,7 @@ public class BoardAnswerService {
             throw new IllegalStateException("강의 Q&A에만 답변 가능");
         }
 
-        if(professor.getUserRole() != 1){
+        if(UserRole.fromCode(professor.getUserRole()) != UserRole.PROFESSOR){
             throw new IllegalStateException("교수만 답변 가능");
         }
 

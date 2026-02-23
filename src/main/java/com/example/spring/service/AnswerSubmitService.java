@@ -93,24 +93,64 @@ public class AnswerSubmitService {
 
     }
 
+    // =========================================================
+    // 레벨별 정답 체크
+    // =========================================================
+
     private boolean checkAnswer(NPCConversation npc, String userAnswer) {
+        return switch (npc.getLevel()) {
+            case BEGINNER     -> checkBeginner(npc, userAnswer);
+            case INTERMEDIATE -> checkIntermediate(npc, userAnswer);
+            case ADVANCED     -> checkAdvanced(npc, userAnswer);
+        };
+    }
 
-        // 초급 / 중급 / 고급 공통 처리
-        List<String> correct = npc.getAnswers();
+    /**
+     * 초급: 빈칸에 들어갈 단어 하나를 선택지에서 고름
+     * answers 리스트 중 하나와 일치하면 정답
+     * ex) answers = ["go", "going"] → "go" 제출 시 정답
+     */
+    private boolean checkBeginner(NPCConversation npc, String userAnswer) {
+        if (userAnswer == null) return false;
+        String trimmed = userAnswer.trim();
+        return npc.getAnswers().stream()
+                .anyMatch(a -> a.equalsIgnoreCase(trimmed));
+    }
 
-//        if (npc.getLevel() == Level.BEGINNER) {
-//            return correct.contains(userAnswer);
-//        }
-//
-//        if (npc.getLevel() == Level.INTERMEDIATE) {
-//            return String.join(" ", correct)
-//                    .equalsIgnoreCase(String.join(" ", userAnswer));
-//        }
-//
-//        // 고급
-//        return String.join(" ", correct)
-//                .equalsIgnoreCase(String.join(" ", userAnswer).trim());
+    /**
+     * 중급: options에 있는 단어들을 순서대로 조합해 문장을 만듦
+     * 프론트에서 단어 순서대로 공백으로 이어 붙여 전송
+     * ex) answers = ["I would like a coffee"] → "I would like a coffee" 제출 시 정답
+     *     순서가 틀리면 ("coffee a like would I") 오답
+     */
+    private boolean checkIntermediate(NPCConversation npc, String userAnswer) {
+        if (userAnswer == null) return false;
+        String submitted = normalize(userAnswer);
+        return npc.getAnswers().stream()
+                .anyMatch(a -> normalize(a).equals(submitted));
+    }
 
-        return correct.contains(userAnswer);
+    /**
+     * 고급: 사용자가 문장을 직접 입력
+     * answers 리스트 중 하나와 일치하면 정답 (대소문자 무시, 앞뒤 공백 제거)
+     * ex) answers = ["I'd like a coffee, please", "I would like a coffee, please"]
+     *     → 둘 중 하나와 일치하면 정답
+     */
+    private boolean checkAdvanced(NPCConversation npc, String userAnswer) {
+        if (userAnswer == null) return false;
+        String submitted = normalize(userAnswer);
+        return npc.getAnswers().stream()
+                .anyMatch(a -> normalize(a).equals(submitted));
+    }
+
+    /**
+     * 공백 정규화 + 대소문자 통일
+     * "  I  would   like  " → "i would like"
+     */
+    private String normalize(String s) {
+        if (s == null) return "";
+        return s.trim()
+                .toLowerCase()
+                .replaceAll("\\s+", " ");  // 연속 공백을 단일 공백으로
     }
 }
