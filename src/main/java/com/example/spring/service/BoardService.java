@@ -147,7 +147,7 @@ public class BoardService {
 
         Board board = getBoard(boardId);
 
-        if(board.getBoardType() == BoardType.NOTICE){
+        if(board.getBoardType() != BoardType.NOTICE){
             throw new IllegalStateException("공지사항만 고정 가능");
         }
 
