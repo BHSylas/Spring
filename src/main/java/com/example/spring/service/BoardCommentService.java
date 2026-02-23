@@ -1,10 +1,10 @@
 package com.example.spring.service;
 
+import com.example.spring.common.exception.NotFoundException;
 import com.example.spring.dto.BoardCommentRequestDTO;
 import com.example.spring.dto.BoardCommentResponseDTO;
-import com.example.spring.entity.Board;
-import com.example.spring.entity.BoardComment;
-import com.example.spring.entity.User;
+import com.example.spring.dto.MyCommentResponseDTO;
+import com.example.spring.entity.*;
 import com.example.spring.repository.BoardCommentRepository;
 import com.example.spring.repository.BoardRepository;
 import com.example.spring.repository.UserRepository;
@@ -30,6 +30,14 @@ public class BoardCommentService {
         Board board = boardRepository.findById(boardId).orElseThrow(() -> new IllegalArgumentException("게시글 없음"));
         User user = userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("사용자 정보 없음"));
 
+        if (board.getBoardType() == BoardType.LECTURE_QNA) {
+            if (UserRole.fromCode(user.getUserRole()) != UserRole.PROFESSOR) {
+                throw new IllegalStateException("교수만 답변 가능");
+            }
+            if (!board.getLecture().getProfessor().getUserId().equals(userId)) {
+                throw new IllegalStateException("본인 강좌 질문에만 답변 가능");
+            }
+        }
         BoardComment parent = null;
         int depth = 0;
 
@@ -100,6 +108,29 @@ public class BoardCommentService {
         Page<BoardComment> parentsPage = boardCommentRepository.findByBoardBoardIdAndDepthAndDeletedFalse(boardId, 0, pageable);
 
         return parentsPage.map(this::toDTOWithChildren);
+    }
+
+    public Page<MyCommentResponseDTO> getMyComments(Long userId, Pageable pageable) {
+        if (!userRepository.existsById(userId)) {
+            throw new NotFoundException("사용자를 찾을 수 없습니다.");
+        }
+
+        return boardCommentRepository
+                .findByWriterWithBoard(userId, BoardType.LECTURE_QNA, pageable)
+                .map(this::toDTO);
+    }
+
+    private MyCommentResponseDTO toDTO(BoardComment comment) {
+        return MyCommentResponseDTO.builder()
+                .commentId(comment.getCommentId())
+                .content(comment.getContent())
+                .depth(comment.getDepth())
+                .createdAt(comment.getCreatedAt())
+                .updatedAt(comment.getUpdatedAt())
+                .boardId(comment.getBoard().getBoardId())
+                .boardType(comment.getBoard().getBoardType())
+                .boardTitle(comment.getBoard().getTitle())
+                .build();
     }
 
 

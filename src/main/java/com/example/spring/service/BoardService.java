@@ -175,11 +175,11 @@ public class BoardService {
             }
         }
 
-        if(boardType == BoardType.LECTURE_QNA){
-            if(user.getUserRole() != 1){
-                throw new IllegalStateException("작성 권한 없음. 교수만 작성 가능");
-            }
-        }
+//        if(boardType == BoardType.LECTURE_QNA){
+//            if(user.getUserRole() != 1){
+//                throw new IllegalStateException("작성 권한 없음. 교수만 작성 가능");
+//            }
+//        }
     }
 
     private BoardResponseDTO toDTO(Board board) {

@@ -17,6 +17,7 @@ public interface NpcConversationRepository extends JpaRepository<NPCConversation
 
     Optional<NPCConversation> findByNpcIdAndProfessorUserId(Long npcId, Long professorId);
 
+    // 교수용: 본인 NPC 목록 필터 조회
     @Query("""
         select n from NPCConversation n where n.professor.userId = :professorId
                 AND (:country is null or n.country = :country)
@@ -30,6 +31,7 @@ public interface NpcConversationRepository extends JpaRepository<NPCConversation
                                                     @Param("place") Place place,
                                                     Pageable pageable);
 
+    // 다음 대화 후보 조회 (교수용)
     @Query("""
         select n from NPCConversation n where  n.lecture.lectureId = :lectureId
                 AND n.country = :country
@@ -40,6 +42,26 @@ public interface NpcConversationRepository extends JpaRepository<NPCConversation
         """)
     List<NPCConversation> findNextCandidate(Long lectureId, Country country,Place place, Level level,
              Long currentNpcId);
+
+
+    // =========================================================
+    // 학생용: 강의 독립 전체 활성 NPC 조회 (필터 선택 적용)
+    // country / place / level 이 null 이면 전체 조회
+    // =========================================================
+    @Query("""
+        select n from NPCConversation n
+        where n.active = true
+          and (:country is null or n.country = :country)
+          and (:place   is null or n.place   = :place)
+          and (:level   is null or n.level   = :level)
+        order by n.country asc, n.level asc, n.place asc, n.npcId asc
+        """)
+    List<NPCConversation> findAllActiveWithFilter(
+            @Param("country") Country country,
+            @Param("place")   Place place,
+            @Param("level")   Level level
+    );
+
 
 
     long countByCountryAndLevel(Country country, Level level);
