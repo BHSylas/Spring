@@ -19,6 +19,9 @@ public interface UserNpcAnswerRepository extends JpaRepository<UserNpcAnswer, Lo
     long countByNpcConversation_Professor_UserIdAndCountryAndLevelAndCorrectTrue(
             Long professorId, Country country, Level level);
 
+    long countByNpcConversation_Professor_UserIdAndCountryAndLevel(
+            Long professorId, Country country, Level level);
+
     long countByCountryAndLevel(Country country, Level level);
 
     long countByCountryAndLevelAndCorrectTrue(Country country, Level level);
