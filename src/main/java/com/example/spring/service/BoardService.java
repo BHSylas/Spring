@@ -2,10 +2,7 @@ package com.example.spring.service;
 
 import com.example.spring.dto.BoardRequestDTO;
 import com.example.spring.dto.BoardResponseDTO;
-import com.example.spring.entity.Board;
-import com.example.spring.entity.BoardType;
-import com.example.spring.entity.Lecture;
-import com.example.spring.entity.User;
+import com.example.spring.entity.*;
 import com.example.spring.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -20,27 +17,14 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BoardService {
 
-    private final LectureRepository lectureRepository;
     private final UserRepository userRepository;
     private final BoardRepository boardRepository;
-    private final EnrollmentRepository enrollmentRepository;
     private final BoardCommentRepository boardCommentRepository;
 
     @Transactional
     public Long create(Long userId, BoardRequestDTO requestDTO){
         Lecture lecture = null;
         User user = userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("회원 정보 없음"));
-
-        if(requestDTO.getBoardType() == BoardType.LECTURE_QNA){
-            lecture = lectureRepository.findById(requestDTO.getLectureId())
-                    .orElseThrow(() -> new IllegalArgumentException("강의 없음"));
-
-            boolean enrolled = enrollmentRepository.existsByUser_UserIdAndLecture_LectureId(userId, requestDTO.getLectureId());
-
-            if(!enrolled){
-                throw new IllegalStateException("수강생만 강의 Q&A 작성 가능");
-            }
-        }
 
         validateWriterPermission(user, requestDTO.getBoardType());
 
@@ -65,15 +49,16 @@ public class BoardService {
     public void update(Long userId, Long boardId, BoardRequestDTO requestDTO){
         Board board = getBoard(boardId);
         User user = userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("회원 정보 없음"));
+        UserRole role = UserRole.fromCode(user.getUserRole());
 
-        if(!board.getWriter().getUserId().equals(userId) &&  user.getUserRole() != 2){
+        if(!board.getWriter().getUserId().equals(userId) &&  role != UserRole.ADMIN){
             throw new IllegalStateException("수정 권한 없음");
         }
 
         board.setTitle(requestDTO.getTitle());
         board.setContent(requestDTO.getContent());
 
-        if( user.getUserRole() == 2){
+        if( role == UserRole.ADMIN ){
             board.setPinned(requestDTO.isPinned());
         }
         board.setUpdatedAt(LocalDateTime.now());
@@ -83,30 +68,15 @@ public class BoardService {
     public void delete(Long userId, Long boardId){
         Board board = getBoard(boardId);
         User user = userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("회원 정보 없음"));
+        UserRole role = UserRole.fromCode(user.getUserRole());
 
-        if(!board.getWriter().getUserId().equals(userId) &&  user.getUserRole() != 2){
+        if(!board.getWriter().getUserId().equals(userId) &&  role != UserRole.ADMIN){
             throw new IllegalStateException("삭제 권한 없음");
         }
 
         board.setDeleted(true);
         boardRepository.save(board);
     }
-
-//    @Transactional(readOnly = true)
-//    public List<BoardResponseDTO> boardList(BoardType boardType, Long lectureId){
-//        List<Board> boards;
-//
-//        if(boardType == BoardType.LECTURE_QNA){
-//            Lecture lecture = lectureRepository.findById(lectureId)
-//                    .orElseThrow(() -> new IllegalArgumentException("강좌 없음"));
-//
-//            boards = boardRepository.findByBoardTypeAndLectureAndDeletedFalseOrderByCreatedAtDesc(boardType, lecture);
-//        }else{
-//            boards =  boardRepository.findByBoardTypeAndDeletedFalseOrderByPinnedDescCreatedAtDesc(boardType);
-//        }
-//        return boards.stream().map(this::toDTO).toList();
-//
-//    }
 
     @Transactional(readOnly = true)
     public Page<BoardResponseDTO> searchBoard(BoardType boardType, Long lectureId,
@@ -127,8 +97,9 @@ public class BoardService {
     public void markAnswered(Long userId, Long boardId){
         Board board = getBoard(boardId);
         User user = userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("회원 정보 없음"));
+        UserRole role = UserRole.fromCode(user.getUserRole());
 
-        if(user.getUserRole() != 1 && user.getUserRole() != 2){
+        if(role != UserRole.PROFESSOR && role != UserRole.ADMIN){
             throw new IllegalStateException("답변 처리 권한 없음");
         }
 
@@ -159,9 +130,6 @@ public class BoardService {
 
     }
 
-
-
-
     private Board getBoard(Long boardId){
         return boardRepository.findByBoardIdAndDeletedFalse(boardId)
                 .orElseThrow(() -> new IllegalArgumentException("게시글 없음"));
@@ -169,17 +137,13 @@ public class BoardService {
     }
 
     private void validateWriterPermission(User user, BoardType boardType){
+        UserRole role = UserRole.fromCode(user.getUserRole());
         if(boardType == BoardType.NOTICE ||  boardType == BoardType.MANUAL ||  boardType == BoardType.FAQ ){
-            if(user.getUserRole() != 2){
+            if(role != UserRole.ADMIN){
                 throw new IllegalStateException("작성 권한 없음. 관리자만 작성 가능");
             }
         }
 
-//        if(boardType == BoardType.LECTURE_QNA){
-//            if(user.getUserRole() != 1){
-//                throw new IllegalStateException("작성 권한 없음. 교수만 작성 가능");
-//            }
-//        }
     }
 
     private BoardResponseDTO toDTO(Board board) {

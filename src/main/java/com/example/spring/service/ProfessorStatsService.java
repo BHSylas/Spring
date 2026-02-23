@@ -23,14 +23,14 @@ public class ProfessorStatsService {
                 .flatMap(country -> List.of(Level.values()).stream()
                         .map(level -> {
                             long totalNpc = conversationRepository.countByProfessor_UserIdAndCountryAndLevel(professorId, country, level);
-                            long solved = userNpcAnswerRepository.countByNpcConversation_Professor_UserIdAndCountryAndLevelAndCorrectTrue(professorId, country, level);
+                            long solved = userNpcAnswerRepository.countByNpcConversation_Professor_UserIdAndCountryAndLevel(professorId, country, level);
                             long correct = userNpcAnswerRepository.countByNpcConversation_Professor_UserIdAndCountryAndLevelAndCorrectTrue(professorId, country, level);
 
                             double accuracy = solved == 0 ? 0.0:
-                                    Math.round((correct * 100/ solved) ) ;
+                                    Math.round((correct * 100.0/ solved) ) ;
 
                             double officialAccuracy = totalNpc == 0 ? 0.0:
-                                    Math.round((correct * 100/ totalNpc) ) ;
+                                    Math.round((correct * 100.0/ totalNpc) ) ;
 
 
                             return NpcStatsDTO.builder()
