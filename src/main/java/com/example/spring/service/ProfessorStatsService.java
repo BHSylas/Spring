@@ -27,10 +27,10 @@ public class ProfessorStatsService {
                             long correct = userNpcAnswerRepository.countByNpcConversation_Professor_UserIdAndCountryAndLevelAndCorrectTrue(professorId, country, level);
 
                             double accuracy = solved == 0 ? 0.0:
-                                    Math.round((correct / solved) * 100) ;
+                                    Math.round((correct * 100/ solved) ) ;
 
                             double officialAccuracy = totalNpc == 0 ? 0.0:
-                                    Math.round((correct / totalNpc) * 100) ;
+                                    Math.round((correct * 100/ totalNpc) ) ;
 
 
                             return NpcStatsDTO.builder()

@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/user")
 public class AnswerSubmitController {
 
-    AnswerSubmitService answerSubmitService;
+    private final AnswerSubmitService answerSubmitService;
     @PostMapping("/answer/{ConversationId}")
     public ResponseEntity<AnswerSubmitResponseDTO> submitAnswer(@AuthenticationPrincipal Long userId, @PathVariable Long ConversationId,
                                                                 @RequestBody AnswerSubmitRequestDTO answerSubmitRequestDTO) {
