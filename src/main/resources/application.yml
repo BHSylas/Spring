@@ -40,5 +40,8 @@ app:
     chunk-size-bytes: 1048576   # 1MB
   youtube:
     api-key: "YOUR_YOUTUBE_API_KEY"
+  signed-url:
+    secret: ${SIGNED_URL_SECRET}
+    ttl-seconds: ${SIGNED_URL_TTL_SECONDS:120}
 
 

@@ -22,6 +22,7 @@ public class AppProperties {
 
     private final Upload upload = new Upload();
     private final Youtube youtube = new Youtube();
+    private final SignedUrl signedUrl = new SignedUrl();
 
     @Getter @Setter
     public static class Cookie {
@@ -65,4 +66,21 @@ public class AppProperties {
         /** YouTube Data API Key (없으면 메타 조회 스킵) */
         private String apiKey = "";
     }
+
+    @Getter @Setter
+    public static class SignedUrl {
+        /**
+         * Signed URL HMAC secret
+         * 운영에서는 충분히 길고 랜덤한 값 사용
+         */
+        private String secret = "change-this-signed-url-secret-very-long-random-string";
+
+        /**
+         * 재생 URL 만료 시간(초)
+         */
+        @Min(10)
+        @Max(600)
+        private long ttlSeconds = 120;
+    }
 }
+

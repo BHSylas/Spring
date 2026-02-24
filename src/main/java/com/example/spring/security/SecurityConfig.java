@@ -47,12 +47,16 @@ public class SecurityConfig {
                                 "/api/auth/refresh"
                         ).permitAll()
 
-                        // 공개 강의 목록/상세는 비회원도 조회 가능
+                        // 공개 강의 목록/상세
                         .requestMatchers("/api/lectures/**").permitAll()
 
-                        .requestMatchers("/api/professor/**").hasRole("PROFESSOR")
-                        .requestMatchers("/api/videos/**").hasAnyRole("USER", "PROFESSOR", "ADMIN")
+                        // play-url 발급은 JWT 필요 (구체적 패턴을 먼저)
+                        .requestMatchers("/api/videos/*/play-url").hasAnyRole("USER", "PROFESSOR", "ADMIN")
 
+                        // 실제 스트리밍은 signed URL 검증으로 처리
+                        .requestMatchers("/api/videos/**").permitAll()
+
+                        .requestMatchers("/api/professor/**").hasRole("PROFESSOR")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/instructor/**").hasAnyRole("PROFESSOR", "ADMIN")
                         .requestMatchers("/api/me/**").hasAnyRole("USER", "ADMIN")
