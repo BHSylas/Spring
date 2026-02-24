@@ -20,6 +20,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -35,7 +39,7 @@ public class LectureService {
     private final YoutubeClient youtubeClient;
 
     // =========================================================
-    // 강사: 강의 CRUD
+    // 1) 강사: 강의 CRUD
     // =========================================================
 
     @Transactional
@@ -62,30 +66,34 @@ public class LectureService {
         return toLectureResponse(lecture);
     }
 
-    /**
-     * 교수: 본인 강의 목록 (status=ALL이면 전체)
-     */
     public Page<LectureResponseDTO> listMyLectures(Long currentUserId, String status, Pageable pageable) {
         requireProfessorUser(currentUserId);
 
-        boolean all = isAll(status);
-        Page<Lecture> page = all
+        Page<Lecture> page = isAll(status)
                 ? lectureRepository.findByProfessor_UserId(currentUserId, pageable)
                 : lectureRepository.findByProfessor_UserIdAndStatus(
                 currentUserId,
                 parseLectureStatus(status, "status 값이 올바르지 않습니다. (ALL, PENDING, APPROVED, REJECTED)"),
                 pageable
         );
+
         return page.map(this::toLectureResponse);
     }
 
-    /**
-     * 강사/관리자용 강의 통계 조회
-     */
+    public Page<LectureListItemDTO> listMyLectureCardItems(Long userId, String status, Pageable pageable) {
+        requireProfessorUser(userId);
+
+        LectureStatus st = isAll(status) ? null : parseLectureStatus(status, "status 값이 올바르지 않습니다.");
+        return lectureRepository.findMyLectureCardItems(userId, st, pageable);
+    }
+
+    // =========================================================
+    // 2) 강사/관리자: 강의 통계
+    // =========================================================
+
     public InstructorLectureStatsDTO getLectureStats(Long currentUserId, Long lectureId) {
         User caller = findUserOrThrow(currentUserId);
         UserRole role = UserRole.fromCode(caller.getUserRole());
-
         requireProfessorOrAdmin(role);
 
         Lecture lecture = findLectureOrThrow(lectureId);
@@ -96,11 +104,9 @@ public class LectureService {
         long enrolledCount = enrollmentRepository.countByLecture_LectureIdAndStatusNot(
                 lectureId, EnrollmentStatus.CANCELED
         );
-
         long completedCount = enrollmentRepository.countByLecture_LectureIdAndStatus(
                 lectureId, EnrollmentStatus.COMPLETED
         );
-
         double avg = enrollmentRepository.avgProgressRateExcludeStatus(
                 lectureId, EnrollmentStatus.CANCELED
         );
@@ -109,7 +115,7 @@ public class LectureService {
     }
 
     // =========================================================
-    // 관리자: 강의 승인/반려 + 목록
+    // 3) 관리자: 목록/승인/반려/대시보드/체크리스트
     // =========================================================
 
     public Page<LectureResponseDTO> adminListLectures(Long adminUserId, String status, Pageable pageable) {
@@ -119,33 +125,114 @@ public class LectureService {
         if (isAll(st)) {
             return lectureRepository.findAll(pageable).map(this::toLectureResponse);
         }
-
         LectureStatus parsed = parseLectureStatus(st, "status 값이 올바르지 않습니다. (ALL, PENDING, APPROVED, REJECTED)");
         return lectureRepository.findByStatus(parsed, pageable).map(this::toLectureResponse);
     }
 
     @Transactional
     public LectureResponseDTO approveLecture(Long adminUserId, Long lectureId) {
+        return approveLecture(adminUserId, lectureId, false);
+    }
+
+    @Transactional
+    public LectureResponseDTO approveLecture(Long adminUserId, Long lectureId, boolean force) {
         User admin = requireAdminUser(adminUserId);
-
         Lecture lecture = findLectureOrThrow(lectureId);
-        lecture.approve(admin);
 
+        if (!force) {
+            AdminLectureApprovalChecklistDTO checklist = buildApprovalChecklist(lecture);
+            if (!checklist.canApprove()) {
+                throw new BadRequestException(buildChecklistFailMessage(checklist));
+            }
+        }
+
+        lecture.approve(admin);
         return toLectureResponse(lecture);
     }
 
     @Transactional
     public LectureResponseDTO rejectLecture(Long adminUserId, Long lectureId, String reason) {
         User admin = requireAdminUser(adminUserId);
-
         Lecture lecture = findLectureOrThrow(lectureId);
-        lecture.reject(admin, reason);
 
+        lecture.reject(admin, reason);
         return toLectureResponse(lecture);
     }
 
+    public AdminLectureApprovalChecklistDTO getApprovalChecklist(Long adminUserId, Long lectureId) {
+        requireAdminUser(adminUserId);
+        Lecture lecture = findLectureOrThrow(lectureId);
+        return buildApprovalChecklist(lecture);
+    }
+
+    public AdminLectureDashboardDTO getAdminLectureDashboard(Long adminUserId) {
+        requireAdminUser(adminUserId);
+
+        LocalDateTime startOfToday = LocalDate.now().atStartOfDay();
+
+        long total = lectureRepository.count();
+        long pending = lectureRepository.countByStatus(LectureStatus.PENDING);
+        long approved = lectureRepository.countByStatus(LectureStatus.APPROVED);
+        long rejected = lectureRepository.countByStatus(LectureStatus.REJECTED);
+
+        long todayNew = lectureRepository.countByCreatedAtGreaterThanEqual(startOfToday);
+        long todayApproved = lectureRepository.countByStatusAndCreatedAtGreaterThanEqual(
+                LectureStatus.APPROVED, startOfToday
+        );
+
+        long pendingWithoutVideo = lectureRepository.countByStatusAndNoVideo(LectureStatus.PENDING);
+
+        return new AdminLectureDashboardDTO(
+                total,
+                pending,
+                approved,
+                rejected,
+                todayNew,
+                todayApproved,
+                pendingWithoutVideo,
+                LocalDateTime.now()
+        );
+    }
+
+    public Page<AdminLectureListItemDTO> adminListLecturesWithChecklist(Long adminUserId, String status, Pageable pageable) {
+        requireAdminUser(adminUserId);
+
+        String st = (status == null || status.isBlank()) ? "PENDING" : status;
+
+        Page<Lecture> page = isAll(st)
+                ? lectureRepository.findAll(pageable)
+                : lectureRepository.findByStatus(
+                parseLectureStatus(st, "status 값이 올바르지 않습니다. (ALL, PENDING, APPROVED, REJECTED)"),
+                pageable
+        );
+
+        return page.map(this::toAdminListItemWithChecklist);
+    }
+
+    public Page<AdminLectureListItemDTO> adminListPendingWithoutVideo(Long adminUserId, Pageable pageable) {
+        requireAdminUser(adminUserId);
+
+        Page<Lecture> page = lectureRepository.findByStatusAndNoVideo(LectureStatus.PENDING, pageable);
+        return page.map(this::toAdminListItemWithChecklist);
+    }
+
+    public Page<LectureListItemDTO> adminLectureCardItems(Long adminUserId, String status, Pageable pageable) {
+        requireAdminUser(adminUserId);
+
+        LectureStatus st = isAll(status) ? null : parseLectureStatus(
+                status, "status 값이 올바르지 않습니다. (ALL, PENDING, APPROVED, REJECTED)"
+        );
+
+        return lectureRepository.adminLectureCardItems(st, pageable);
+    }
+
+    public Page<LectureListItemDTO> adminPendingWithoutVideoCardItems(Long adminUserId, Pageable pageable) {
+        requireAdminUser(adminUserId);
+        return lectureRepository.adminPendingWithoutVideoCardItems(LectureStatus.PENDING, pageable);
+    }
+
     // =========================================================
-    // 학생: 공개 강의 목록/검색 (APPROVED 전용)
+    // 4) 학생: 승인 강의 목록/검색
     // =========================================================
 
     public Page<LectureResponseDTO> listApprovedWithFilters(
@@ -158,49 +245,69 @@ public class LectureService {
         String normLang = normalizeLanguage(language);
         String normKeyword = normalizeKeyword(keyword);
 
-        // enrolling 필터 없으면 기존 검색 그대로
+        // enrolling 필터가 없으면: 승인 강의 일반 검색
         if (enrolling == null) {
-            return lectureRepository.searchApproved(LectureStatus.APPROVED, normLang, normKeyword, pageable)
+            return lectureRepository.searchApproved(
+                            LectureStatus.APPROVED,
+                            normLang,
+                            normKeyword,
+                            pageable
+                    )
                     .map(this::toLectureResponse);
         }
 
-        // 로그인 없이 enrolling 쓰면 의미가 없음
-        requireLoggedInForEnrollingFilter(currentUserId);
-
-        var activeLectureIds = enrollmentRepository.findActiveLectureIdsByUserId(
-                currentUserId, EnrollmentStatus.CANCELED
-        );
-
-        if (activeLectureIds.isEmpty()) {
-            // enrolling=true면 빈 페이지 / enrolling=false면 전체 = 미수강 전체
-            return enrolling
-                    ? Page.empty(pageable)
-                    : lectureRepository.searchApproved(LectureStatus.APPROVED, normLang, normKeyword, pageable)
-                    .map(this::toLectureResponse);
+        // enrolling=true/false 사용 시 로그인 필수
+        if (currentUserId == null) {
+            throw new BadRequestException("enrolling 필터는 로그인 후 사용 가능합니다.");
         }
 
-        Page<Lecture> page = enrolling
-                ? lectureRepository.searchApprovedInLectureIds(LectureStatus.APPROVED, normLang, normKeyword, activeLectureIds, pageable)
-                : lectureRepository.searchApprovedNotInLectureIds(LectureStatus.APPROVED, normLang, normKeyword, activeLectureIds, pageable);
-
-        return page.map(this::toLectureResponse);
+        return lectureRepository.searchApprovedByEnrollment(
+                        LectureStatus.APPROVED,
+                        currentUserId,
+                        enrolling,                   // Boolean -> boolean 오토 언박싱
+                        EnrollmentStatus.CANCELED,   // 취소 제외(활성 수강 기준)
+                        normLang,
+                        normKeyword,
+                        pageable
+                )
+                .map(this::toLectureResponse);
     }
 
-    /**
-     * 기존 메서드(호환용): 승인 강의만 단순 조회
-     */
-    @Transactional
     public Page<LectureResponseDTO> listApproved(Pageable pageable) {
         return lectureRepository.findByStatus(LectureStatus.APPROVED, pageable).map(this::toLectureResponse);
     }
 
-    @Transactional
     public LectureResponseDTO getLectureDetail(Long lectureId) {
         return toLectureResponse(findLectureOrThrow(lectureId));
     }
 
+    public Page<LectureListItemDTO> listApprovedLectureCardItems(
+            Long currentUserId,
+            String language,
+            Boolean enrolling,
+            String keyword,
+            Pageable pageable
+    ) {
+        String normLang = normalizeLanguage(language);
+        String normKeyword = normalizeKeyword(keyword);
+
+        if (enrolling != null && currentUserId == null) {
+            throw new BadRequestException("enrolling 필터는 로그인 후 사용 가능합니다.");
+        }
+
+        return lectureRepository.approvedLectureCardItems(
+                LectureStatus.APPROVED,
+                currentUserId,
+                enrolling,
+                EnrollmentStatus.CANCELED,
+                normLang,
+                normKeyword,
+                pageable
+        );
+    }
+
     // =========================================================
-    // 강의 영상: 업로드 / 유튜브 연결 / 메타 갱신
+    // 5) 강의 영상: 업로드/유튜브 연결/메타 갱신/삭제/교체
     // =========================================================
 
     @Transactional
@@ -257,10 +364,7 @@ public class LectureService {
 
         User caller = findUserOrThrow(currentUserId);
         boolean isAdmin = UserRole.fromCode(caller.getUserRole()) == UserRole.ADMIN;
-
-        if (!isAdmin) {
-            requireLectureOwner(lecture, currentUserId);
-        }
+        if (!isAdmin) requireLectureOwner(lecture, currentUserId);
 
         LectureVideo video = lectureVideoRepository.findByLecture_LectureId(lectureId)
                 .orElseThrow(() -> new NotFoundException("강의에 등록된 영상이 없습니다."));
@@ -268,10 +372,8 @@ public class LectureService {
         requireYoutubeVideo(video);
 
         String videoId = requireNonBlank(video.getYoutubeVideoId(), "youtubeVideoId가 비어있습니다.");
-
         YoutubeClient.YoutubeMeta meta = youtubeClient.fetchMetaSafe(videoId);
 
-        // 메타가 비어있으면(키 없음/외부 실패/타임아웃) DB 업데이트 스킵
         if (meta.isEmpty()) {
             return new VideoMetaRefreshResponseDTO(false, toVideoResponse(video));
         }
@@ -282,7 +384,6 @@ public class LectureService {
         return new VideoMetaRefreshResponseDTO(updated, toVideoResponse(video));
     }
 
-    // 영상 교체
     @Transactional
     public void deleteLectureVideo(Long currentUserId, Long lectureId) {
         Lecture lecture = findLectureOrThrow(lectureId);
@@ -305,7 +406,6 @@ public class LectureService {
             lectureVideoRepository.delete(v);
         });
 
-        // 기존 1개 정책 upload 메서드 재사용
         return uploadLectureVideo(currentUserId, lectureId, file);
     }
 
@@ -323,7 +423,171 @@ public class LectureService {
     }
 
     // =========================================================
-    // 권한/검증 헬퍼
+    // 6) 체크리스트/요약 변환
+    // =========================================================
+
+    private AdminLectureListItemDTO toAdminListItemWithChecklist(Lecture lecture) {
+        AdminLectureApprovalChecklistDTO checklist = buildApprovalChecklist(lecture);
+
+        long requiredTotal = checklist.items().stream()
+                .filter(AdminLectureApprovalChecklistDTO.Item::required)
+                .count();
+
+        long requiredFailed = checklist.items().stream()
+                .filter(AdminLectureApprovalChecklistDTO.Item::required)
+                .filter(i -> !i.passed())
+                .count();
+
+        return new AdminLectureListItemDTO(
+                lecture.getLectureId(),
+                lecture.getTitle(),
+                lecture.getCountry(),
+                lecture.getLanguage(),
+                lecture.getStatus(),
+                lecture.getProfessor() == null ? null : lecture.getProfessor().getUserId(),
+                lecture.getProfessor() == null ? null : lecture.getProfessor().getUserNickname(),
+                lecture.getCreatedAt(),
+                checklist.canApprove(),
+                (int) requiredTotal,
+                (int) requiredFailed
+        );
+    }
+
+    private AdminLectureApprovalChecklistDTO buildApprovalChecklist(Lecture lecture) {
+        List<AdminLectureApprovalChecklistDTO.Item> items = new ArrayList<>();
+
+        // 상태
+        boolean statusOk = lecture.getStatus() == LectureStatus.PENDING;
+        items.add(new AdminLectureApprovalChecklistDTO.Item(
+                "status", "상태가 PENDING 인가?", true, statusOk,
+                statusOk ? null : ("현재 상태: " + lecture.getStatus())
+        ));
+
+        // 기본 입력값
+        items.add(new AdminLectureApprovalChecklistDTO.Item(
+                "title", "강의 제목이 입력되었나?", true,
+                lecture.getTitle() != null && !lecture.getTitle().isBlank(),
+                (lecture.getTitle() != null && !lecture.getTitle().isBlank()) ? null : "title 이 비어있습니다."
+        ));
+        items.add(new AdminLectureApprovalChecklistDTO.Item(
+                "description", "강의 설명이 입력되었나?", true,
+                lecture.getDescription() != null && !lecture.getDescription().isBlank(),
+                (lecture.getDescription() != null && !lecture.getDescription().isBlank()) ? null : "description 이 비어있습니다."
+        ));
+        items.add(new AdminLectureApprovalChecklistDTO.Item(
+                "country", "국가(country)가 입력되었나?", true,
+                lecture.getCountry() != null && !lecture.getCountry().isBlank(),
+                (lecture.getCountry() != null && !lecture.getCountry().isBlank()) ? null : "country 이 비어있습니다."
+        ));
+        items.add(new AdminLectureApprovalChecklistDTO.Item(
+                "language", "언어(language)가 입력되었나?", true,
+                lecture.getLanguage() != null && !lecture.getLanguage().isBlank(),
+                (lecture.getLanguage() != null && !lecture.getLanguage().isBlank()) ? null : "language 이 비어있습니다."
+        ));
+
+        // 교수
+        boolean professorOk = lecture.getProfessor() != null && lecture.getProfessor().getUserId() != null;
+        items.add(new AdminLectureApprovalChecklistDTO.Item(
+                "professor", "강의에 교수(작성자)가 연결되어 있나?", true, professorOk,
+                professorOk ? null : "professor 정보가 없습니다."
+        ));
+
+        // 영상 존재
+        var videoOpt = lectureVideoRepository.findByLecture_LectureId(lecture.getLectureId());
+        boolean hasVideo = videoOpt.isPresent();
+        items.add(new AdminLectureApprovalChecklistDTO.Item(
+                "video", "강의 영상이 등록되어 있나?", true, hasVideo,
+                hasVideo ? null : "lecture_videos에 해당 lecture_id 영상이 없습니다."
+        ));
+
+        if (hasVideo) {
+            LectureVideo v = videoOpt.get();
+
+            boolean typeOk = v.getSourceType() != null;
+            items.add(new AdminLectureApprovalChecklistDTO.Item(
+                    "video.sourceType", "영상 sourceType이 존재하나?", true, typeOk,
+                    typeOk ? null : "sourceType이 null입니다."
+            ));
+
+            boolean isYoutube = (v.getSourceType() == VideoSourceType.YOUTUBE);
+
+            // 유튜브일 때만 "메타"를 필수로 강제
+            boolean titleOk = !isYoutube || (v.getYoutubeVideoTitle() != null && !v.getYoutubeVideoTitle().isBlank());
+            items.add(new AdminLectureApprovalChecklistDTO.Item(
+                    "video.videoTitle", "영상 제목(title)이 존재하나? (유튜브 필수)",
+                    isYoutube, titleOk,
+                    titleOk ? null : "youtubeVideoTitle이 비어있습니다."
+            ));
+
+            boolean channelOk = !isYoutube || (v.getYoutubeChannelTitle() != null && !v.getYoutubeChannelTitle().isBlank());
+            items.add(new AdminLectureApprovalChecklistDTO.Item(
+                    "video.channelTitle", "채널명(channelTitle)이 존재하나? (유튜브 필수)",
+                    isYoutube, channelOk,
+                    channelOk ? null : "youtubeChannelTitle이 비어있습니다."
+            ));
+
+            boolean durationOk = !isYoutube || (v.getDurationSec() > 0);
+            items.add(new AdminLectureApprovalChecklistDTO.Item(
+                    "video.durationSec", "영상 길이(durationSec)가 0보다 큰가? (유튜브 필수)",
+                    isYoutube, durationOk,
+                    durationOk ? null : "durationSec 값이 0입니다."
+            ));
+
+            boolean thumbOk = !isYoutube || (v.getThumbnailUrl() != null && !v.getThumbnailUrl().isBlank());
+            items.add(new AdminLectureApprovalChecklistDTO.Item(
+                    "video.thumbnailUrl", "썸네일(thumbnailUrl)이 존재하나? (유튜브 필수)",
+                    isYoutube, thumbOk,
+                    thumbOk ? null : "thumbnailUrl이 비어있습니다."
+            ));
+
+            // 소스별 필수값
+            if (isYoutube) {
+                boolean ytIdOk = v.getYoutubeVideoId() != null && !v.getYoutubeVideoId().isBlank();
+                items.add(new AdminLectureApprovalChecklistDTO.Item(
+                        "video.youtubeVideoId", "유튜브 videoId가 저장되어 있나?", true, ytIdOk,
+                        ytIdOk ? null : "youtubeVideoId가 비어있습니다."
+                ));
+
+                boolean ytUrlOk = v.getYoutubeUrl() != null && !v.getYoutubeUrl().isBlank();
+                items.add(new AdminLectureApprovalChecklistDTO.Item(
+                        "video.youtubeUrl", "유튜브 URL이 저장되어 있나?", true, ytUrlOk,
+                        ytUrlOk ? null : "youtubeUrl이 비어있습니다."
+                ));
+            }
+
+            if (v.getSourceType() == VideoSourceType.UPLOAD) {
+                boolean pathOk = v.getLocalPath() != null && !v.getLocalPath().isBlank();
+                items.add(new AdminLectureApprovalChecklistDTO.Item(
+                        "video.localPath", "업로드 영상 localPath가 저장되어 있나?", true, pathOk,
+                        pathOk ? null : "localPath가 비어있습니다."
+                ));
+            }
+        }
+
+        boolean canApprove = items.stream()
+                .filter(AdminLectureApprovalChecklistDTO.Item::required)
+                .allMatch(AdminLectureApprovalChecklistDTO.Item::passed);
+
+        return new AdminLectureApprovalChecklistDTO(lecture.getLectureId(), canApprove, items);
+    }
+
+    private String buildChecklistFailMessage(AdminLectureApprovalChecklistDTO checklist) {
+        StringBuilder sb = new StringBuilder("승인 체크리스트를 통과하지 못했습니다.\n");
+        checklist.items().stream()
+                .filter(AdminLectureApprovalChecklistDTO.Item::required)
+                .filter(i -> !i.passed())
+                .forEach(i -> {
+                    sb.append("- ").append(i.title());
+                    if (i.detail() != null && !i.detail().isBlank()) {
+                        sb.append(" (").append(i.detail()).append(")");
+                    }
+                    sb.append("\n");
+                });
+        return sb.toString().trim();
+    }
+
+    // =========================================================
+    // 7) 권한/검증 헬퍼
     // =========================================================
 
     private User findUserOrThrow(Long userId) {
@@ -384,7 +648,6 @@ public class LectureService {
 
     private void deletePhysicalFileIfUpload(LectureVideo video) {
         if (video == null) return;
-
         if (video.getSourceType() != VideoSourceType.UPLOAD) return;
 
         String localPath = video.getLocalPath();
@@ -422,7 +685,7 @@ public class LectureService {
     }
 
     // =========================================================
-    // 파싱/정규화 & DTO 변환
+    // 8) 파싱/정규화 & DTO 변환
     // =========================================================
 
     private LectureStatus parseLectureStatus(String status, String whenInvalidMessage) {
