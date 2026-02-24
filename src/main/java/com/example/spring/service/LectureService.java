@@ -276,7 +276,7 @@ public class LectureService {
     public Page<LectureResponseDTO> listApproved(Pageable pageable) {
         return lectureRepository.findByStatus(LectureStatus.APPROVED, pageable).map(this::toLectureResponse);
     }
-
+    @Transactional
     public LectureResponseDTO getLectureDetail(Long lectureId) {
         return toLectureResponse(findLectureOrThrow(lectureId));
     }

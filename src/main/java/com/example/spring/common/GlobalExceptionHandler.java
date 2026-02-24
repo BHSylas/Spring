@@ -99,7 +99,9 @@ public class GlobalExceptionHandler {
     // 500
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponseDTO> unknown(Exception e, HttpServletRequest req) {
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .contentType(MediaType.APPLICATION_JSON)
                 .body(body(HttpStatus.INTERNAL_SERVER_ERROR, "서버 오류가 발생했습니다.", req));
     }
 }

@@ -150,18 +150,11 @@ public class VideoStreamController {
                     .body(resource);
         }
 
-        HttpRange range = ranges.get(0);
-        long start = range.getRangeStart(contentLength);
-        long end = range.getRangeEnd(contentLength);
-
-        long rangeLength = Math.min(chunkSize, end - start + 1);
-        ResourceRegion region = new ResourceRegion(resource, start, rangeLength);
-
-        return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
+        return ResponseEntity.ok()
                 .contentType(mediaType)
-                .header(HttpHeaders.ACCEPT_RANGES, "bytes")
-                .header(HttpHeaders.CACHE_CONTROL, "private, max-age=60")
-                .body(region);
+                .contentLength(contentLength)
+                .body(resource);
+
     }
 
     // =========================================================
