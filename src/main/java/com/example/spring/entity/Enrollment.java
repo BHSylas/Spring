@@ -130,7 +130,7 @@ public class Enrollment {
         int newProgress = Math.max(0, Math.min(progress, 100));
 
         // 진도 감소 방지
-        if (newProgress <= this.progressRate) return;
+        if (newProgress < this.progressRate) return;
 
         this.progressRate = newProgress;
         this.lastWatchedTime = Math.max(0, lastWatchedTime);
