@@ -48,6 +48,25 @@ public class UserNpcService {
         return toUserResponse(target, answerMap.get(target.getNpcId()));
 
     }
+
+    // =========================================================
+    // 전체 NPC 목록 + 사용자 풀이 상태 반환 (메타버스용)
+    // =========================================================
+    public List<UserNpcConversationResponseDTO> getAllConversations(Long userId, Country country, Place place, Level level) {
+        List<NPCConversation> candidates = npcConversationRepository.findAllActiveWithFilter(country, place, level);
+
+        if(candidates.isEmpty()) {
+            return List.of();
+        }
+
+        Map<Long, UserNpcAnswer> answerMap = buildAnswerMap(userId, candidates);
+
+        return candidates.stream().
+                map(npc -> toUserResponse(npc, answerMap.get(npc.getNpcId()))).toList();
+
+
+
+    }
     // =========================================================
     // 특정 NPC 대화 단건 조회
     // GET /api/user/npc/conversation/{conversationId}

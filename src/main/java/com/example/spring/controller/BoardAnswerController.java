@@ -30,9 +30,9 @@ public class BoardAnswerController {
         return ResponseEntity.ok().build();
     }
 
-    @DeleteMapping("/delete/{answerId}")
-    public ResponseEntity<Void> delete(@AuthenticationPrincipal Long professorId, @PathVariable Long answerId){
-        boardAnswerService.deleteAnswer(professorId, answerId);
+    @DeleteMapping("/delete/{professorId}/{answerId}")
+    public ResponseEntity<Void> delete(@PathVariable Long professorId, @PathVariable Long answerId){
+        boardAnswerService.deleteAnswer(answerId, professorId);
         return ResponseEntity.ok().build();
     }
 
