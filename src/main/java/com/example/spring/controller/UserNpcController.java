@@ -12,6 +12,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
 @RestController
 @RequestMapping("/api/user/npc")
@@ -39,6 +41,23 @@ public class UserNpcController {
             @RequestParam(required = false) Level level
     ) {
         return ResponseEntity.ok(userNpcService.start(userId, country, place, level));
+    }
+
+    /**
+     * 전체 NPC 문제 목록 조회 (메타버스 진입 시 한 번에 로드)
+     * GET /api/user/npc/list
+     *
+     * 필터를 모두 생략하면 전체 활성 NPC를 반환.
+     * 메타버스에서 특정 국가/장소/레벨 진입 시 필터를 지정해 호출.
+     */
+    @GetMapping("/list")
+    public ResponseEntity<List<UserNpcConversationResponseDTO>> getAllConversations(
+            @AuthenticationPrincipal Long userId,
+            @RequestParam(required = false) Country country,
+            @RequestParam(required = false) Place place,
+            @RequestParam(required = false) Level level
+    ) {
+        return ResponseEntity.ok(userNpcService.getAllConversations(userId, country, place, level));
     }
 
     /**
