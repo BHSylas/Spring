@@ -87,10 +87,11 @@ public class InstructorLectureController {
     public LectureVideoResponseDTO uploadVideo(
             Authentication authentication,
             @PathVariable Long lectureId,
-            @RequestPart("file") MultipartFile file
+            @RequestPart("file") MultipartFile file,
+            @RequestPart(value = "thumbnail", required = false) MultipartFile thumbnail
     ) {
-        Long userId = userId(authentication);
-        return lectureService.uploadLectureVideo(userId, lectureId, file);
+        Long userId = CurrentUser.getUserId(authentication);
+        return lectureService.uploadLectureVideo(userId, lectureId, file, thumbnail);
     }
 
     @PostMapping("/{lectureId}/video/youtube")
@@ -114,10 +115,11 @@ public class InstructorLectureController {
     public LectureVideoResponseDTO replaceUpload(
             Authentication authentication,
             @PathVariable Long lectureId,
-            @RequestPart("file") MultipartFile file
+            @RequestPart("file") MultipartFile file,
+            @RequestPart(value = "thumbnail", required = false) MultipartFile thumbnail
     ) {
-        Long userId = userId(authentication);
-        return lectureService.replaceLectureVideoWithUpload(userId, lectureId, file);
+        Long userId = CurrentUser.getUserId(authentication);
+        return lectureService.replaceLectureVideoWithUpload(userId, lectureId, file, thumbnail);
     }
 
     @PutMapping("/{lectureId}/video/youtube")
