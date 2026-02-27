@@ -311,22 +311,25 @@ public class LectureService {
     // =========================================================
 
     @Transactional
-    public LectureVideoResponseDTO uploadLectureVideo(Long currentUserId, Long lectureId, MultipartFile file) {
+    public LectureVideoResponseDTO uploadLectureVideo(Long currentUserId, Long lectureId, MultipartFile file,  MultipartFile thumbnail) {
         Lecture lecture = findLectureOrThrow(lectureId);
         requireLectureOwner(lecture, currentUserId);
         requireNoExistingVideo(lectureId);
 
-        var stored = localFileStorage.saveVideo(file);
+        var storedVideo = localFileStorage.saveVideo(file);
+        var storedThumb = localFileStorage.saveThumbnail(thumbnail);
+
+        String thumbnailUrl = (storedThumb == null) ? null : storedThumb.localPath();
 
         LectureVideo video = LectureVideo.ofUpload(
                 lecture,
-                stored.localPath(),
-                stored.originalFilename(),
-                stored.storedFilename(),
-                stored.mimeType(),
-                stored.fileSizeBytes(),
+                storedVideo.localPath(),
+                storedVideo.originalFilename(),
+                storedVideo.storedFilename(),
+                storedVideo.mimeType(),
+                storedVideo.fileSizeBytes(),
                 0,
-                null
+                thumbnailUrl
         );
 
         return toVideoResponse(lectureVideoRepository.save(video));
@@ -393,20 +396,22 @@ public class LectureService {
                 .orElseThrow(() -> new NotFoundException("강의에 등록된 영상이 없습니다."));
 
         deletePhysicalFileIfUpload(video);
+        deletePhysicalThumbnailIfExists(video);
         lectureVideoRepository.delete(video);
     }
 
     @Transactional
-    public LectureVideoResponseDTO replaceLectureVideoWithUpload(Long currentUserId, Long lectureId, MultipartFile file) {
+    public LectureVideoResponseDTO replaceLectureVideoWithUpload(Long currentUserId, Long lectureId, MultipartFile file, MultipartFile thumbnail) {
         Lecture lecture = findLectureOrThrow(lectureId);
         requireLectureOwner(lecture, currentUserId);
 
         lectureVideoRepository.findByLecture_LectureId(lectureId).ifPresent(v -> {
             deletePhysicalFileIfUpload(v);
+            deletePhysicalThumbnailIfExists(v);
             lectureVideoRepository.delete(v);
         });
 
-        return uploadLectureVideo(currentUserId, lectureId, file);
+        return uploadLectureVideo(currentUserId, lectureId, file, thumbnail);
     }
 
     @Transactional
@@ -416,6 +421,7 @@ public class LectureService {
 
         lectureVideoRepository.findByLecture_LectureId(lectureId).ifPresent(v -> {
             deletePhysicalFileIfUpload(v);
+            deletePhysicalThumbnailIfExists(v);
             lectureVideoRepository.delete(v);
         });
 
@@ -654,6 +660,18 @@ public class LectureService {
         if (localPath == null || localPath.isBlank()) return;
 
         localFileStorage.deleteByLocalPath(localPath);
+    }
+
+    private void deletePhysicalThumbnailIfExists(LectureVideo video) {
+        if (video == null) return;
+
+        String thumbnailUrl = video.getThumbnailUrl();
+        if (thumbnailUrl == null || thumbnailUrl.isBlank()) return;
+
+        // 유튜브 썸네일은 외부 URL일 수 있으니 로컬 경로(/...)만 삭제
+        if (!thumbnailUrl.startsWith("/")) return;
+
+        localFileStorage.deleteByLocalPath(thumbnailUrl);
     }
 
     private String extractYoutubeVideoIdOrThrow(String urlOrId) {

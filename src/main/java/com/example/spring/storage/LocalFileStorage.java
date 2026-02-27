@@ -96,6 +96,51 @@ public class LocalFileStorage {
         }
     }
 
+    public StoredImage saveThumbnail(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return null; // 썸네일 선택사항이면 null 허용
+        }
+
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new BadRequestException("썸네일은 이미지 파일만 업로드할 수 있습니다.");
+        }
+
+        String original = StringUtils.cleanPath(file.getOriginalFilename() == null ? "thumbnail" : file.getOriginalFilename());
+        String ext = getExtension(original);
+        String extNoDot = ext.startsWith(".") ? ext.substring(1) : ext;
+        extNoDot = extNoDot.toLowerCase(Locale.ROOT);
+
+        // 간단하게 이미지 확장자만 허용
+        if (!java.util.Set.of("jpg", "jpeg", "png", "webp").contains(extNoDot)) {
+            throw new BadRequestException("허용되지 않는 썸네일 확장자입니다: " + extNoDot);
+        }
+
+        String stored = UUID.randomUUID() + (ext.isBlank() ? ".jpg" : ext);
+
+        LocalDate now = LocalDate.now();
+        Path dir = baseDir.resolve("thumbnails")
+                .resolve(String.valueOf(now.getYear()))
+                .resolve(String.format("%02d", now.getMonthValue()));
+
+        try {
+            Files.createDirectories(dir);
+            Path target = dir.resolve(stored);
+            Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
+
+            String relativePath = baseDir.relativize(target).toString().replace("\\", "/");
+            return new StoredImage(
+                    "/" + relativePath, // 예: /thumbnails/2026/02/uuid.jpg
+                    original,
+                    stored,
+                    contentType,
+                    file.getSize()
+            );
+        } catch (IOException e) {
+            throw new BadRequestException("썸네일 저장 실패: " + e.getMessage());
+        }
+    }
+
     private String getExtension(String filename) {
         int dot = filename.lastIndexOf('.');
         if (dot < 0) return "";
@@ -103,6 +148,14 @@ public class LocalFileStorage {
     }
 
     public record StoredFile(
+            String localPath,
+            String originalFilename,
+            String storedFilename,
+            String mimeType,
+            long fileSizeBytes
+    ) {}
+
+    public record StoredImage(
             String localPath,
             String originalFilename,
             String storedFilename,
