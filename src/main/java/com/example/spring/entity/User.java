@@ -32,25 +32,44 @@ public class User {
     @Column(name = "user_role", nullable = false)
     private byte userRole; // 0/1/2 (default 0)
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "user_status", nullable = false, length = 20)
+    private UserStatus userStatus;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
     @Builder
-    private User(String userEmail, String userPw, String userName, String userNickname, byte userRole) {
+    private User(String userEmail, String userPw, String userName, String userNickname, byte userRole, UserStatus userStatus) {
         this.userEmail = userEmail;
         this.userPw = userPw;
         this.userName = userName;
         this.userNickname = userNickname;
         this.userRole = userRole;
+        this.userStatus = (userStatus == null) ? UserStatus.ACTIVE : userStatus;
     }
 
     @PrePersist
     void prePersist() {
         if (this.createdAt == null) this.createdAt = LocalDateTime.now();
+        if (this.userStatus == null) this.userStatus = UserStatus.ACTIVE;
     }
+
 
     // 닉네임 수정
     public void changeNickname(String newNickname) {
         this.userNickname = newNickname;
+    }
+
+    public void changeRole(byte newRole) {
+        this.userRole = newRole;
+    }
+
+    public void changeStatus(UserStatus newStatus) {
+        this.userStatus = newStatus;
+    }
+
+    public boolean isBlocked() {
+        return this.userStatus == UserStatus.BLOCKED;
     }
 }
