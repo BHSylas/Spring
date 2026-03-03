@@ -73,7 +73,7 @@ public class AppProperties {
          * Signed URL HMAC secret
          * 운영에서는 충분히 길고 랜덤한 값 사용
          */
-        private String secret = "change-this-signed-url-secret-very-long-random-string";
+        private String secret;
 
         /**
          * 재생 URL 만료 시간(초)
