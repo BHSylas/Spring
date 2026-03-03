@@ -38,4 +38,32 @@ public interface UserNpcAnswerRepository extends JpaRepository<UserNpcAnswer, Lo
     List<UserNpcAnswer> findByUserUserIdAndNpcConversationNpcIdIn(
             @Param("userId") Long userId,
             @Param("npcIds") List<Long> npcIds);
+
+
+    @Query("""
+    select count(distinct a.user.userId)
+    from UserNpcAnswer a
+    where a.country = :country
+      and a.level = :level
+    """)
+    long countDistinctUserByCountryAndLevel(
+            @Param("country") Country country,
+            @Param("level") Level level
+    );
+
+    @Query("""
+        select count(distinct a.user.userId)
+        from UserNpcAnswer a
+        where a.npcConversation.professor.userId = :professorId
+          and a.country = :country
+          and a.level = :level
+        """)
+    long countDistinctUserByProfessorAndCountryAndLevel(
+            @Param("professorId") Long professorId,
+            @Param("country") Country country,
+            @Param("level") Level level
+    );
+
 }
+
+

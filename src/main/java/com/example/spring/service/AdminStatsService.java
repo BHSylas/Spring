@@ -22,16 +22,24 @@ public class AdminStatsService {
         return List.of(Country.values()).stream()
                 .flatMap(country -> List.of(Level.values()).stream()
                         .map(level -> {
-                            long totalNpc = npcConversationRepository.countByCountryAndLevel(country, level);
-                            long solved = userNpcAnswerRepository.countByCountryAndLevel(country, level);
-                            long correct = userNpcAnswerRepository.countByCountryAndLevelAndCorrectTrue(country, level);
+                            long totalNpc = npcConversationRepository
+                                    .countByCountryAndLevel(country, level);
+                            long solved = userNpcAnswerRepository
+                                    .countByCountryAndLevel(country, level);
+                            long correct = userNpcAnswerRepository
+                                    .countByCountryAndLevelAndCorrectTrue(country, level);
 
-                            double accuracy = solved == 0 ? 0.0:
-                                    Math.round((correct * 100.0/ solved) ) ;
+                            // ✅ 추가: 고유 사용자 수
+                            long distinctUsers = userNpcAnswerRepository
+                                    .countDistinctUserByCountryAndLevel(country, level);
 
-                            double officialAccuracy = totalNpc == 0 ? 0.0:
-                                    Math.round((correct * 100.0/ totalNpc) ) ;
+                            double accuracy = solved == 0 ? 0.0 :
+                                    Math.round((correct * 100.0 / solved));
 
+                            // ✅ 수정: 전체 문제 수 × 사용자 수 대비 정답 수
+                            long denominator = totalNpc * distinctUsers;
+                            double officialAccuracy = denominator == 0 ? 0.0 :
+                                    Math.round((correct * 100.0 / denominator));
 
                             return NpcStatsDTO.builder()
                                     .country(country)
@@ -43,9 +51,7 @@ public class AdminStatsService {
                                     .officialAccuracy(officialAccuracy)
                                     .build();
                         })
-
                 ).toList();
-
-
     }
+
 }
