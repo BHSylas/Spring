@@ -20,12 +20,15 @@ public class BoardService {
     private final UserRepository userRepository;
     private final BoardRepository boardRepository;
     private final BoardCommentRepository boardCommentRepository;
+    private final LectureRepository lectureRepository;
 
     @Transactional
     public Long create(Long userId, BoardRequestDTO requestDTO){
-        Lecture lecture = null;
+        Long lectureId = requestDTO.getLectureId();
         User user = userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("회원 정보 없음"));
+        Lecture lecture = lectureRepository.findById(lectureId).orElse(null)
 
+                ;
         validateWriterPermission(user, requestDTO.getBoardType());
 
         Board board = Board.builder()
