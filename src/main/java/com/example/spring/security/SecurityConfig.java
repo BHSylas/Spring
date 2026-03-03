@@ -47,6 +47,9 @@ public class SecurityConfig {
                                 "/api/auth/refresh"
                         ).permitAll()
 
+                        // 공개 썸네일
+                        .requestMatchers("/thumbnails/**").permitAll()
+
                         // 공개 강의 목록/상세
                         .requestMatchers("/api/lectures/**").permitAll()
 
