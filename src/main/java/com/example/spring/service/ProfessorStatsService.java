@@ -25,13 +25,15 @@ public class ProfessorStatsService {
                             long totalNpc = conversationRepository.countByProfessor_UserIdAndCountryAndLevel(professorId, country, level);
                             long solved = userNpcAnswerRepository.countByNpcConversation_Professor_UserIdAndCountryAndLevel(professorId, country, level);
                             long correct = userNpcAnswerRepository.countByNpcConversation_Professor_UserIdAndCountryAndLevelAndCorrectTrue(professorId, country, level);
+                            long distinctUsers = userNpcAnswerRepository
+                                    .countDistinctUserByProfessorAndCountryAndLevel(professorId, country, level);
 
                             double accuracy = solved == 0 ? 0.0:
                                     Math.round((correct * 100.0/ solved) ) ;
 
-                            double officialAccuracy = totalNpc == 0 ? 0.0:
-                                    Math.round((correct * 100.0/ totalNpc) ) ;
-
+                            long denominator = totalNpc * distinctUsers;
+                            double officialAccuracy = denominator == 0 ? 0.0 :
+                                    Math.round((correct * 100.0 / denominator));
 
                             return NpcStatsDTO.builder()
                                     .country(country)
