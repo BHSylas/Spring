@@ -1,6 +1,8 @@
 package com.example.spring.security;
 
+import com.example.spring.entity.User;
 import com.example.spring.entity.UserRole;
+import com.example.spring.repository.UserRepository;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
@@ -17,9 +19,11 @@ import java.util.List;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
+    private final UserRepository userRepository;
 
-    public JwtAuthFilter(JwtService jwtService) {
+    public JwtAuthFilter(JwtService jwtService, UserRepository userRepository) {
         this.jwtService = jwtService;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -43,13 +47,22 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             }
 
             Long userId = Long.valueOf(claims.getSubject());
-            Integer roleInt = claims.get("role", Integer.class); // JSON 숫자라 Integer로 들어오는 경우가 많음
+
+            // DB에서 사용자 상태 확인
+            User user = userRepository.findById(userId).orElse(null);
+            if (user == null || user.isBlocked()) {
+                SecurityContextHolder.clearContext();
+                chain.doFilter(request, response);
+                return;
+            }
+
+            Integer roleInt = claims.get("role", Integer.class);
             if (roleInt == null) {
                 chain.doFilter(request, response);
                 return;
             }
-            byte roleCode = roleInt.byteValue();
 
+            byte roleCode = roleInt.byteValue();
             String authority = UserRole.fromCode(roleCode).getAuthority();
 
             var authToken = new UsernamePasswordAuthenticationToken(

@@ -50,7 +50,8 @@ public class AuthService {
                 .userPw(passwordEncoder.encode(req.getPassword()))
                 .userName(req.getName())
                 .userNickname(req.getNickname())
-                .userRole((byte) 0) // 기본 일반유저
+                .userRole((byte) 0)
+                .userStatus(UserStatus.ACTIVE)
                 .build();
 
         userRepository.save(user);
@@ -63,6 +64,11 @@ public class AuthService {
 
         User u = userRepository.findByUserEmail(req.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        if (u.isBlocked()) {
+            refreshTokenRepository.revokeAllActiveByUserId(u.getUserId());
+            throw new UnauthorizedException("차단된 계정입니다. 관리자에게 문의하세요.");
+        }
 
         String access = jwtService.generateAccessToken(u.getUserId(), u.getUserEmail(), u.getUserRole());
         String refresh = jwtService.generateRefreshToken(u.getUserId());
@@ -120,6 +126,11 @@ public class AuthService {
 
         User u = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        if (u.isBlocked()) {
+            refreshTokenRepository.revokeAllActiveByUserId(userId);
+            throw new UnauthorizedException("차단된 계정입니다. 관리자에게 문의하세요.");
+        }
 
         String newAccess = jwtService.generateAccessToken(u.getUserId(), u.getUserEmail(), u.getUserRole());
         String newRefresh = jwtService.generateRefreshToken(u.getUserId());
