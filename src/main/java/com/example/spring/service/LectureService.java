@@ -401,6 +401,30 @@ public class LectureService {
     }
 
     @Transactional
+    public void deleteLecture(Long currentUserId, Long lectureId) {
+        Lecture lecture = findLectureOrThrow(lectureId);
+        requireLectureOwner(lecture, currentUserId);
+
+        // 정책: 활성 수강생이 1명이라도 있으면 삭제 금지
+        boolean hasActiveEnrollment = enrollmentRepository.existsByLecture_LectureIdAndStatusNot(
+                lectureId, EnrollmentStatus.CANCELED
+        );
+        if (hasActiveEnrollment) {
+            throw new BadRequestException("수강 중인 학생이 있는 강의는 삭제할 수 없습니다.");
+        }
+
+        // 연결된 영상이 있으면 먼저 정리
+        lectureVideoRepository.findByLecture_LectureId(lectureId).ifPresent(video -> {
+            deletePhysicalFileIfUpload(video);
+            deletePhysicalThumbnailIfExists(video);
+            lectureVideoRepository.delete(video);
+        });
+
+        // 마지막으로 강의 삭제
+        lectureRepository.delete(lecture);
+    }
+
+    @Transactional
     public LectureVideoResponseDTO replaceLectureVideoWithUpload(Long currentUserId, Long lectureId, MultipartFile file, MultipartFile thumbnail) {
         Lecture lecture = findLectureOrThrow(lectureId);
         requireLectureOwner(lecture, currentUserId);

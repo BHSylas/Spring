@@ -111,6 +111,13 @@ public class InstructorLectureController {
         lectureService.deleteLectureVideo(userId, lectureId);
     }
 
+    @DeleteMapping("/{lectureId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteLecture(Authentication authentication, @PathVariable Long lectureId) {
+        Long userId = userId(authentication);
+        lectureService.deleteLecture(userId, lectureId);
+    }
+
     @PutMapping(value = "/{lectureId}/video/upload", consumes = "multipart/form-data")
     public LectureVideoResponseDTO replaceUpload(
             Authentication authentication,

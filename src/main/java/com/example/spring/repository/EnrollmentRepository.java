@@ -55,4 +55,7 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
     """)
     Double avgProgressRateExcludeStatus(@Param("lectureId") Long lectureId,
                                         @Param("excluded") EnrollmentStatus excluded);
+
+    // 활성 수강생 존재 여부
+    boolean existsByLecture_LectureIdAndStatusNot(Long lectureId, EnrollmentStatus status);
 }
