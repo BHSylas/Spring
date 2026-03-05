@@ -1,6 +1,7 @@
 package com.example.spring.dto;
 
 import com.example.spring.entity.BoardType;
+import com.example.spring.entity.User;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -11,6 +12,7 @@ import java.time.LocalDateTime;
 
 public class BoardResponseDTO {
     private Long boardId;
+    private Long writer;
     private BoardType boardType;
     private Long lectureId;
     private String title;
