@@ -154,6 +154,7 @@ public class BoardService {
         
         return BoardResponseDTO.builder()
                 .boardId(board.getBoardId())
+                .writer(board.getWriter().getUserId())
                 .boardType(board.getBoardType())
                 .lectureId(board.getLecture() != null ? board.getLecture().getLectureId() : null)
                 .title(board.getTitle())
