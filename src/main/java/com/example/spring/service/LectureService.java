@@ -115,7 +115,7 @@ public class LectureService {
     }
 
     // =========================================================
-    // 3) 관리자: 목록/승인/반려/대시보드/체크리스트
+    // 3) 관리자: 목록/승인/반려/대시보드/체크리스트/비활성화
     // =========================================================
     @Transactional
     public Page<LectureResponseDTO> adminListLectures(Long adminUserId, String status, Pageable pageable) {
@@ -156,6 +156,36 @@ public class LectureService {
         Lecture lecture = findLectureOrThrow(lectureId);
 
         lecture.reject(admin, reason);
+        return toLectureResponse(lecture);
+    }
+
+    @Transactional
+    public LectureResponseDTO adminInactivateLecture(Long adminUserId, Long lectureId) {
+        User admin = findUserOrThrow(adminUserId);
+        RoleGuard.requireAdmin(admin);
+
+        Lecture lecture = findLectureOrThrow(lectureId);
+
+        if (lecture.getStatus() == LectureStatus.INACTIVE) {
+            throw new BadRequestException("이미 비활성화된 강의입니다.");
+        }
+
+        lecture.inactivate(admin);
+        return toLectureResponse(lecture);
+    }
+
+    @Transactional
+    public LectureResponseDTO adminReactivateLecture(Long adminUserId, Long lectureId) {
+        User admin = findUserOrThrow(adminUserId);
+        RoleGuard.requireAdmin(admin);
+
+        Lecture lecture = findLectureOrThrow(lectureId);
+
+        if (lecture.getStatus() != LectureStatus.INACTIVE) {
+            throw new BadRequestException("비활성화된 강의만 다시 활성화할 수 있습니다.");
+        }
+
+        lecture.reactivate(admin);
         return toLectureResponse(lecture);
     }
 

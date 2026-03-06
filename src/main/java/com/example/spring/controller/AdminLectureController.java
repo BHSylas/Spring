@@ -99,7 +99,7 @@ public class AdminLectureController {
     }
 
     // =========================================================
-    // 승인/반려
+    // 승인/반려/비활성화
     // =========================================================
 
     @PatchMapping("/{lectureId}/approval")
@@ -120,6 +120,24 @@ public class AdminLectureController {
     ) {
         Long adminId = adminId(authentication);
         return lectureService.rejectLecture(adminId, lectureId, req.getReason());
+    }
+
+    @PatchMapping("/{lectureId}/inactivate")
+    public LectureResponseDTO inactivate(
+            Authentication authentication,
+            @PathVariable Long lectureId
+    ) {
+        Long adminId = adminId(authentication);
+        return lectureService.adminInactivateLecture(adminId, lectureId);
+    }
+
+    @PatchMapping("/{lectureId}/reactivate")
+    public LectureResponseDTO reactivate(
+            Authentication authentication,
+            @PathVariable Long lectureId
+    ) {
+        Long adminId = adminId(authentication);
+        return lectureService.adminReactivateLecture(adminId, lectureId);
     }
 
     // =========================================================
