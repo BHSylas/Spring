@@ -8,22 +8,20 @@ import java.time.LocalDateTime;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
-@Table(name = "email_verification_tokens", indexes = {
-        @Index(name = "idx_email_verify_token", columnList = "token", unique = true),
-        @Index(name = "idx_email_verify_user", columnList = "user_id")
+@Table(name = "email_verification_codes", indexes = {
+        @Index(name = "idx_email_verify_email", columnList = "email", unique = true)
 })
-public class EmailVerificationToken {
+public class EmailVerificationCode {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false, unique = true)
-    private User user;
+    @Column(name = "email", nullable = false, length = 120, unique = true)
+    private String email;
 
-    @Column(name = "token", nullable = false, length = 120, unique = true)
-    private String token;
+    @Column(name = "code", nullable = false, length = 6)
+    private String code;
 
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;
@@ -35,9 +33,9 @@ public class EmailVerificationToken {
     private LocalDateTime createdAt;
 
     @Builder
-    private EmailVerificationToken(User user, String token, LocalDateTime expiresAt) {
-        this.user = user;
-        this.token = token;
+    private EmailVerificationCode(String email, String code, LocalDateTime expiresAt) {
+        this.email = email;
+        this.code = code;
         this.expiresAt = expiresAt;
     }
 
@@ -47,19 +45,23 @@ public class EmailVerificationToken {
     }
 
     public boolean isExpired() {
-        return expiresAt.isBefore(LocalDateTime.now());
+        return this.expiresAt.isBefore(LocalDateTime.now());
     }
 
     public boolean isVerified() {
-        return verifiedAt != null;
+        return this.verifiedAt != null;
+    }
+
+    public boolean matches(String inputCode) {
+        return this.code.equals(inputCode);
     }
 
     public void markVerified() {
         this.verifiedAt = LocalDateTime.now();
     }
 
-    public void renew(String newToken, LocalDateTime newExpiresAt) {
-        this.token = newToken;
+    public void renew(String newCode, LocalDateTime newExpiresAt) {
+        this.code = newCode;
         this.expiresAt = newExpiresAt;
         this.verifiedAt = null;
     }

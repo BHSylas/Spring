@@ -23,22 +23,22 @@ public class AuthController {
         this.authService = authService;
     }
 
-    @PostMapping("/signup")
-    public ResponseEntity<?> signup(@Valid @RequestBody SignUpRequestDTO req) {
-        authService.signup(req);
-        return ResponseEntity.ok("회원가입이 완료되었습니다. 이메일 인증 후 로그인해주세요.");
+    @PostMapping("/send-verification-code")
+    public ResponseEntity<?> sendVerificationCode(@Valid @RequestBody SendVerificationCodeRequestDTO req) {
+        authService.sendVerificationCode(req.getEmail());
+        return ResponseEntity.ok("인증번호를 이메일로 발송했습니다.");
     }
 
-    @GetMapping("/verify-email")
-    public ResponseEntity<?> verifyEmail(@RequestParam String token) {
-        authService.verifyEmail(token);
+    @PostMapping("/verify-email-code")
+    public ResponseEntity<?> verifyEmailCode(@Valid @RequestBody VerifyEmailCodeRequestDTO req) {
+        authService.verifyEmailCode(req.getEmail(), req.getCode());
         return ResponseEntity.ok("이메일 인증이 완료되었습니다.");
     }
 
-    @PostMapping("/resend-verification")
-    public ResponseEntity<?> resendVerification(@RequestBody ResendVerificationRequest request) {
-        authService.resendVerification(request.getEmail());
-        return ResponseEntity.ok("인증 메일을 다시 발송했습니다.");
+    @PostMapping("/signup")
+    public ResponseEntity<?> signup(@Valid @RequestBody SignUpRequestDTO req) {
+        authService.signup(req);
+        return ResponseEntity.ok("회원가입이 완료되었습니다.");
     }
 
     // 로그인: refreshToken은 HttpOnly 쿠키로, 바디는 accessToken + 유저정보
@@ -133,15 +133,5 @@ public class AuthController {
                 .build();
 
         res.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
-    }
-
-    static class ResendVerificationRequest {
-        @Email
-        @NotBlank
-        private String email;
-
-        public String getEmail() {
-            return email;
-        }
     }
 }

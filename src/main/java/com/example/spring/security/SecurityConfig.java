@@ -45,8 +45,8 @@ public class SecurityConfig {
                                 "/api/auth/signup",
                                 "/api/auth/login",
                                 "/api/auth/refresh",
-                                "/api/auth/verify-email",
-                                "/api/auth/resend-verification"
+                                "/api/auth/send-verification-code",
+                                "/api/auth/verify-email-code"
                         ).permitAll()
 
                         // 공개 썸네일
