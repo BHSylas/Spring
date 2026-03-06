@@ -5,6 +5,8 @@ import com.example.spring.dto.*;
 import com.example.spring.service.AuthService;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
@@ -24,7 +26,19 @@ public class AuthController {
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@Valid @RequestBody SignUpRequestDTO req) {
         authService.signup(req);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok("회원가입이 완료되었습니다. 이메일 인증 후 로그인해주세요.");
+    }
+
+    @GetMapping("/verify-email")
+    public ResponseEntity<?> verifyEmail(@RequestParam String token) {
+        authService.verifyEmail(token);
+        return ResponseEntity.ok("이메일 인증이 완료되었습니다.");
+    }
+
+    @PostMapping("/resend-verification")
+    public ResponseEntity<?> resendVerification(@RequestBody ResendVerificationRequest request) {
+        authService.resendVerification(request.getEmail());
+        return ResponseEntity.ok("인증 메일을 다시 발송했습니다.");
     }
 
     // 로그인: refreshToken은 HttpOnly 쿠키로, 바디는 accessToken + 유저정보
@@ -119,5 +133,15 @@ public class AuthController {
                 .build();
 
         res.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+    }
+
+    static class ResendVerificationRequest {
+        @Email
+        @NotBlank
+        private String email;
+
+        public String getEmail() {
+            return email;
+        }
     }
 }
