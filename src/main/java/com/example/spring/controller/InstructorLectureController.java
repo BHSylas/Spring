@@ -79,6 +79,16 @@ public class InstructorLectureController {
         return lectureService.updateLecture(userId, lectureId, req);
     }
 
+    /**
+     * 강의 삭제 (정책: 취소 제외 활성 수강생이 있으면 삭제 불가)
+     */
+    @DeleteMapping("/{lectureId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteLecture(Authentication authentication, @PathVariable Long lectureId) {
+        Long userId = userId(authentication);
+        lectureService.deleteLecture(userId, lectureId);
+    }
+
     // =========================================================
     // 영상: 업로드/유튜브/삭제/교체/메타 갱신
     // =========================================================
@@ -109,13 +119,6 @@ public class InstructorLectureController {
     public void deleteVideo(Authentication authentication, @PathVariable Long lectureId) {
         Long userId = userId(authentication);
         lectureService.deleteLectureVideo(userId, lectureId);
-    }
-
-    @DeleteMapping("/{lectureId}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteLecture(Authentication authentication, @PathVariable Long lectureId) {
-        Long userId = userId(authentication);
-        lectureService.deleteLecture(userId, lectureId);
     }
 
     @PutMapping(value = "/{lectureId}/video/upload", consumes = "multipart/form-data")

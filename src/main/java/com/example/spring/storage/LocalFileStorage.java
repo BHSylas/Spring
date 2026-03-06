@@ -1,8 +1,7 @@
 package com.example.spring.storage;
 
-import com.example.spring.config.AppProperties;
 import com.example.spring.common.exception.BadRequestException;
-import lombok.extern.slf4j.Slf4j;
+import com.example.spring.config.AppProperties;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -13,9 +12,7 @@ import java.time.LocalDate;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
-@Slf4j
 @Component
 public class LocalFileStorage {
 
@@ -26,22 +23,24 @@ public class LocalFileStorage {
     public LocalFileStorage(AppProperties props) {
         this.baseDir = Paths.get(props.getUpload().getBaseDir()).toAbsolutePath().normalize();
         this.maxBytes = (long) props.getUpload().getMaxFileMb() * 1024 * 1024;
-
-        this.allowedExt = props.getUpload().getAllowedExt().stream()
-                .filter(StringUtils::hasText)
-                .map(s -> s.toLowerCase(Locale.ROOT).trim())
-                .collect(Collectors.toSet());
+        this.allowedExt = Set.copyOf(props.getUpload().getAllowedExt());
     }
 
+    // =========================================================
+    // 영상 저장
+    // =========================================================
+
     public StoredFile saveVideo(MultipartFile file) {
-        if (file == null || file.isEmpty()) throw new BadRequestException("업로드 파일이 비었습니다.");
+        if (file == null || file.isEmpty()) {
+            throw new BadRequestException("업로드 파일이 비었습니다.");
+        }
 
         if (file.getSize() > maxBytes) {
             throw new BadRequestException("파일 용량이 너무 큽니다. (최대 " + (maxBytes / 1024 / 1024) + "MB)");
         }
 
         String original = StringUtils.cleanPath(file.getOriginalFilename() == null ? "video" : file.getOriginalFilename());
-        String ext = getExtension(original); // ".mp4" 또는 ""
+        String ext = getExtension(original);
 
         String extNoDot = ext.startsWith(".") ? ext.substring(1) : ext;
         extNoDot = extNoDot.toLowerCase(Locale.ROOT);
@@ -57,7 +56,6 @@ public class LocalFileStorage {
                 .resolve(String.valueOf(now.getYear()))
                 .resolve(String.format("%02d", now.getMonthValue()));
 
-
         try {
             Files.createDirectories(dir);
             Path target = dir.resolve(stored);
@@ -65,7 +63,7 @@ public class LocalFileStorage {
 
             String relativePath = baseDir.relativize(target).toString().replace("\\", "/");
             return new StoredFile(
-                    "/" + relativePath, // 예: /videos/2026/02/uuid.mp4
+                    "/" + relativePath, // 예: /videos/2026/03/uuid.mp4
                     original,
                     stored,
                     file.getContentType(),
@@ -76,29 +74,13 @@ public class LocalFileStorage {
         }
     }
 
-    public void deleteByLocalPath(String localPath) {
-        if (localPath == null || localPath.isBlank()) return;
-
-        String rel = localPath.startsWith("/") ? localPath.substring(1) : localPath;
-
-        Path base = baseDir.toAbsolutePath().normalize();
-        Path target = base.resolve(rel).toAbsolutePath().normalize();
-
-        // 보안: baseDir 밖 경로로 탈출 방지
-        if (!target.startsWith(base)) {
-            return;
-        }
-
-        try {
-            Files.deleteIfExists(target);
-        } catch (IOException e) {
-            log.warn("file delete failed: {}", target, e);
-        }
-    }
+    // =========================================================
+    // 썸네일 저장 (프론트가 만든 이미지 업로드)
+    // =========================================================
 
     public StoredImage saveThumbnail(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            return null; // 썸네일 선택사항이면 null 허용
+            return null; // 썸네일 선택사항
         }
 
         String contentType = file.getContentType();
@@ -108,11 +90,11 @@ public class LocalFileStorage {
 
         String original = StringUtils.cleanPath(file.getOriginalFilename() == null ? "thumbnail" : file.getOriginalFilename());
         String ext = getExtension(original);
+
         String extNoDot = ext.startsWith(".") ? ext.substring(1) : ext;
         extNoDot = extNoDot.toLowerCase(Locale.ROOT);
 
-        // 간단하게 이미지 확장자만 허용
-        if (!java.util.Set.of("jpg", "jpeg", "png", "webp").contains(extNoDot)) {
+        if (!Set.of("jpg", "jpeg", "png", "webp").contains(extNoDot)) {
             throw new BadRequestException("허용되지 않는 썸네일 확장자입니다: " + extNoDot);
         }
 
@@ -130,7 +112,7 @@ public class LocalFileStorage {
 
             String relativePath = baseDir.relativize(target).toString().replace("\\", "/");
             return new StoredImage(
-                    "/" + relativePath, // 예: /thumbnails/2026/02/uuid.jpg
+                    "/" + relativePath, // 예: /thumbnails/2026/03/uuid.jpg
                     original,
                     stored,
                     contentType,
@@ -141,11 +123,39 @@ public class LocalFileStorage {
         }
     }
 
-    private String getExtension(String filename) {
-        int dot = filename.lastIndexOf('.');
-        if (dot < 0) return "";
-        return filename.substring(dot);
+    // =========================================================
+    // 파일 삭제
+    // =========================================================
+
+    public void deleteByLocalPath(String localPath) {
+        if (!StringUtils.hasText(localPath)) return;
+
+        String relative = localPath.startsWith("/") ? localPath.substring(1) : localPath;
+        Path target = baseDir.resolve(relative).normalize();
+
+        if (!target.startsWith(baseDir)) {
+            throw new BadRequestException("잘못된 파일 경로입니다.");
+        }
+
+        try {
+            Files.deleteIfExists(target);
+        } catch (IOException e) {
+            throw new BadRequestException("파일 삭제 실패: " + e.getMessage());
+        }
     }
+
+    // =========================================================
+    // 내부 헬퍼
+    // =========================================================
+
+    private String getExtension(String filename) {
+        int idx = filename.lastIndexOf('.');
+        return (idx < 0) ? "" : filename.substring(idx);
+    }
+
+    // =========================================================
+    // 반환 DTO
+    // =========================================================
 
     public record StoredFile(
             String localPath,
@@ -153,7 +163,8 @@ public class LocalFileStorage {
             String storedFilename,
             String mimeType,
             long fileSizeBytes
-    ) {}
+    ) {
+    }
 
     public record StoredImage(
             String localPath,
@@ -161,5 +172,6 @@ public class LocalFileStorage {
             String storedFilename,
             String mimeType,
             long fileSizeBytes
-    ) {}
+    ) {
+    }
 }

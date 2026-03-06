@@ -36,6 +36,9 @@ public class User {
     @Column(name = "user_status", nullable = false, length = 20)
     private UserStatus userStatus;
 
+    @Column(name = "email_verified_at")
+    private LocalDateTime emailVerifiedAt;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -46,17 +49,15 @@ public class User {
         this.userName = userName;
         this.userNickname = userNickname;
         this.userRole = userRole;
-        this.userStatus = (userStatus == null) ? UserStatus.ACTIVE : userStatus;
+        this.userStatus = (userStatus == null) ? UserStatus.PENDING : userStatus;
     }
 
     @PrePersist
     void prePersist() {
         if (this.createdAt == null) this.createdAt = LocalDateTime.now();
-        if (this.userStatus == null) this.userStatus = UserStatus.ACTIVE;
+        if (this.userStatus == null) this.userStatus = UserStatus.PENDING;
     }
 
-
-    // 닉네임 수정
     public void changeNickname(String newNickname) {
         this.userNickname = newNickname;
     }
@@ -69,7 +70,16 @@ public class User {
         this.userStatus = newStatus;
     }
 
+    public void verifyEmail() {
+        this.userStatus = UserStatus.ACTIVE;
+        this.emailVerifiedAt = LocalDateTime.now();
+    }
+
     public boolean isBlocked() {
         return this.userStatus == UserStatus.BLOCKED;
+    }
+
+    public boolean isPending() {
+        return this.userStatus == UserStatus.PENDING;
     }
 }
