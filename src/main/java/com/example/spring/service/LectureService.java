@@ -5,10 +5,7 @@ import com.example.spring.common.exception.ForbiddenException;
 import com.example.spring.common.exception.NotFoundException;
 import com.example.spring.dto.*;
 import com.example.spring.entity.*;
-import com.example.spring.repository.EnrollmentRepository;
-import com.example.spring.repository.LectureRepository;
-import com.example.spring.repository.LectureVideoRepository;
-import com.example.spring.repository.UserRepository;
+import com.example.spring.repository.*;
 import com.example.spring.security.RoleGuard;
 import com.example.spring.storage.LocalFileStorage;
 import com.example.spring.youtube.YoutubeClient;
@@ -34,6 +31,8 @@ public class LectureService {
     private final LectureRepository lectureRepository;
     private final LectureVideoRepository lectureVideoRepository;
     private final EnrollmentRepository enrollmentRepository;
+    private final NpcConversationRepository npcConversationRepository;
+    private final UserNpcAnswerRepository userNpcAnswerRepository;
 
     private final LocalFileStorage localFileStorage;
     private final YoutubeClient youtubeClient;
@@ -443,12 +442,22 @@ public class LectureService {
             throw new BadRequestException("수강 중인 학생이 있는 강의는 삭제할 수 없습니다.");
         }
 
+        boolean hasNpcAnswerHistory = userNpcAnswerRepository.existsByNpcConversation_Lecture_LectureId(lectureId);
+        if (hasNpcAnswerHistory) {
+            throw new BadRequestException("문제 풀이 이력이 있는 강의는 삭제할 수 없습니다.");
+        }
+
         // 연결된 영상이 있으면 먼저 정리
         lectureVideoRepository.findByLecture_LectureId(lectureId).ifPresent(video -> {
             deletePhysicalFileIfUpload(video);
             deletePhysicalThumbnailIfExists(video);
             lectureVideoRepository.delete(video);
         });
+
+        // 메타버스 문제(NPC 대화) 먼저 삭제
+        if (npcConversationRepository.existsByLecture_LectureId(lectureId)) {
+            npcConversationRepository.deleteByLecture_LectureId(lectureId);
+        }
 
         // 마지막으로 강의 삭제
         lectureRepository.delete(lecture);

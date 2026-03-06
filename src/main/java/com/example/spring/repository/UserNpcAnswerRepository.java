@@ -12,6 +12,8 @@ public interface UserNpcAnswerRepository extends JpaRepository<UserNpcAnswer, Lo
 
     Optional<UserNpcAnswer> findByUserUserIdAndNpcConversation(Long userId, NPCConversation npc);
 
+    boolean existsByNpcConversation_Lecture_LectureId(Long lectureId);
+
     long countByUserUserIdAndCountryAndLevel(Long userId, Country country, Level level);
 
     long countByUserUserIdAndCountryAndLevelAndCorrectTrue(Long userId, Country country, Level level);
