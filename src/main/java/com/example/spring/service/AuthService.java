@@ -5,7 +5,7 @@ import com.example.spring.common.exception.RefreshReplayDetectedException;
 import com.example.spring.common.exception.UnauthorizedException;
 import com.example.spring.entity.*;
 import com.example.spring.dto.*;
-import com.example.spring.repository.EmailVerificationTokenRepository;
+import com.example.spring.repository.EmailVerificationCodeRepository;
 import com.example.spring.repository.RefreshTokenRepository;
 import com.example.spring.repository.UserRepository;
 import com.example.spring.security.JwtService;
@@ -19,14 +19,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
+import java.util.Random;
 
 @Service
 public class AuthService {
 
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
-    private final EmailVerificationTokenRepository emailVerificationTokenRepository;
+    private final EmailVerificationCodeRepository emailVerificationCodeRepository;
     private final EmailVerificationMailService emailVerificationMailService;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
@@ -34,19 +34,67 @@ public class AuthService {
 
     public AuthService(UserRepository userRepository,
                        RefreshTokenRepository refreshTokenRepository,
-                       EmailVerificationTokenRepository emailVerificationTokenRepository,
+                       EmailVerificationCodeRepository emailVerificationCodeRepository,
                        EmailVerificationMailService emailVerificationMailService,
                        PasswordEncoder passwordEncoder,
                        AuthenticationManager authenticationManager,
                        JwtService jwtService) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
-        this.emailVerificationTokenRepository = emailVerificationTokenRepository;
+        this.emailVerificationCodeRepository = emailVerificationCodeRepository;
         this.emailVerificationMailService = emailVerificationMailService;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
     }
+
+    @Transactional
+    public void sendVerificationCode(String rawEmail) {
+        String email = normalizeEmail(rawEmail);
+
+        if (userRepository.existsByUserEmail(email)) {
+            throw new ConflictException("이미 사용 중인 이메일입니다.");
+        }
+
+        String code = generate6DigitCode();
+        LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(5);
+
+        EmailVerificationCode verificationCode = emailVerificationCodeRepository.findByEmail(email)
+                .orElseGet(() -> EmailVerificationCode.builder()
+                        .email(email)
+                        .code(code)
+                        .expiresAt(expiresAt)
+                        .build());
+
+        if (verificationCode.getId() == null) {
+            emailVerificationCodeRepository.save(verificationCode);
+        } else {
+            verificationCode.renew(code, expiresAt);
+        }
+
+        emailVerificationMailService.sendVerificationCode(email, code);
+    }
+
+    @Transactional
+    public void verifyEmailCode(String rawEmail, String inputCode) {
+        String email = normalizeEmail(rawEmail);
+
+        EmailVerificationCode verificationCode = emailVerificationCodeRepository.findByEmail(email)
+                .orElseThrow(() -> new UnauthorizedException("인증번호 요청 이력이 없습니다."));
+
+        if (verificationCode.isExpired()) {
+            throw new UnauthorizedException("인증번호가 만료되었습니다. 다시 요청해주세요.");
+        }
+
+        if (!verificationCode.matches(inputCode)) {
+            throw new UnauthorizedException("인증번호가 올바르지 않습니다.");
+        }
+
+        if (!verificationCode.isVerified()) {
+            verificationCode.markVerified();
+        }
+    }
+
 
     @Transactional
     public void signup(SignUpRequestDTO req) {
@@ -56,27 +104,30 @@ public class AuthService {
             throw new ConflictException("이미 사용 중인 이메일입니다.");
         }
 
+        EmailVerificationCode verificationCode = emailVerificationCodeRepository.findByEmail(email)
+                .orElseThrow(() -> new UnauthorizedException("이메일 인증을 먼저 완료해주세요."));
+
+        if (verificationCode.isExpired()) {
+            throw new UnauthorizedException("이메일 인증이 만료되었습니다. 다시 인증해주세요.");
+        }
+
+        if (!verificationCode.isVerified()) {
+            throw new UnauthorizedException("이메일 인증을 먼저 완료해주세요.");
+        }
+
         User user = User.builder()
                 .userEmail(email)
                 .userPw(passwordEncoder.encode(req.getPassword()))
                 .userName(req.getName().trim())
                 .userNickname(req.getNickname().trim())
                 .userRole((byte) 0)
-                .userStatus(UserStatus.PENDING)
+                .userStatus(UserStatus.ACTIVE)
                 .build();
 
+        user.verifyEmail(); // emailVerifiedAt 세팅
         userRepository.save(user);
 
-        String token = generateVerificationToken();
-
-        EmailVerificationToken verificationToken = EmailVerificationToken.builder()
-                .user(user)
-                .token(token)
-                .expiresAt(LocalDateTime.now().plusMinutes(30))
-                .build();
-
-        emailVerificationTokenRepository.save(verificationToken);
-        emailVerificationMailService.sendVerificationEmail(user.getUserEmail(), token);
+        emailVerificationCodeRepository.deleteByEmail(email);
     }
 
     public TokenPairDTO login(LoginRequestDTO req) {
@@ -104,55 +155,6 @@ public class AuthService {
 
         return new TokenPairDTO(access, refresh, u.getUserNickname(), u.getUserName());
     }
-
-    @Transactional
-    public void verifyEmail(String token) {
-        EmailVerificationToken verificationToken = emailVerificationTokenRepository.findByToken(token)
-                .orElseThrow(() -> new UnauthorizedException("유효하지 않은 인증 토큰입니다."));
-
-        if (verificationToken.isVerified()) {
-            throw new ConflictException("이미 인증이 완료된 토큰입니다.");
-        }
-
-        if (verificationToken.isExpired()) {
-            throw new UnauthorizedException("인증 토큰이 만료되었습니다. 다시 요청해주세요.");
-        }
-
-        User user = verificationToken.getUser();
-        user.verifyEmail();
-        verificationToken.markVerified();
-    }
-
-    @Transactional
-    public void resendVerification(String email) {
-        String normalizedEmail = normalizeEmail(email);
-
-        User user = userRepository.findByUserEmail(normalizedEmail)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
-
-        if (user.getUserStatus() == UserStatus.ACTIVE) {
-            throw new ConflictException("이미 이메일 인증이 완료된 계정입니다.");
-        }
-
-        String newToken = generateVerificationToken();
-        LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(30);
-
-        EmailVerificationToken tokenEntity = emailVerificationTokenRepository.findByUser(user)
-                .orElseGet(() -> EmailVerificationToken.builder()
-                        .user(user)
-                        .token(newToken)
-                        .expiresAt(expiresAt)
-                        .build());
-
-        if (tokenEntity.getId() == null) {
-            emailVerificationTokenRepository.save(tokenEntity);
-        } else {
-            tokenEntity.renew(newToken, expiresAt);
-        }
-
-        emailVerificationMailService.sendVerificationEmail(user.getUserEmail(), newToken);
-    }
-
 
     /**
      * Refresh Token 로테이션 + 리플레이 탐지
@@ -226,10 +228,9 @@ public class AuthService {
     @Transactional
     public void logout(String refreshToken) {
         if (refreshToken == null || refreshToken.isBlank()) return;
-
-        String hash = TokenHash.sha256Hex(refreshToken);
-        refreshTokenRepository.revokeIfActive(hash);
+        refreshTokenRepository.revokeIfActive(TokenHash.sha256Hex(refreshToken));
     }
+
 
     public MeResponseDTO me() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -263,8 +264,8 @@ public class AuthService {
         return email == null ? null : email.trim().toLowerCase();
     }
 
-    private String generateVerificationToken() {
-        return UUID.randomUUID().toString().replace("-", "")
-                + UUID.randomUUID().toString().replace("-", "");
+    private String generate6DigitCode() {
+        int value = 100000 + new Random().nextInt(900000);
+        return String.valueOf(value);
     }
 }

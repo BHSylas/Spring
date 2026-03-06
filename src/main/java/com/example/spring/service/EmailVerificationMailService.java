@@ -10,9 +10,6 @@ public class EmailVerificationMailService {
 
     private final JavaMailSender mailSender;
 
-    @Value("${app.frontend-base-url}")
-    private String frontendBaseUrl;
-
     @Value("${spring.mail.username}")
     private String fromEmail;
 
@@ -20,18 +17,16 @@ public class EmailVerificationMailService {
         this.mailSender = mailSender;
     }
 
-    public void sendVerificationEmail(String toEmail, String token) {
-        String verifyUrl = frontendBaseUrl + "/verify-email?token=" + token;
-
+    public void sendVerificationCode(String toEmail, String code) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(toEmail);
         message.setFrom(fromEmail);
-        message.setSubject("[LMS] 이메일 인증 안내");
+        message.setSubject("[LMS] 이메일 인증번호 안내");
         message.setText(
                 "안녕하세요.\n\n" +
-                        "아래 링크를 클릭해서 이메일 인증을 완료해주세요.\n\n" +
-                        verifyUrl + "\n\n" +
-                        "링크 유효시간은 30분입니다."
+                        "이메일 인증번호는 아래와 같습니다.\n\n" +
+                        code + "\n\n" +
+                        "인증번호 유효시간은 5분입니다."
         );
 
         mailSender.send(message);
