@@ -17,6 +17,12 @@ public interface NpcConversationRepository extends JpaRepository<NPCConversation
 
     Optional<NPCConversation> findByNpcIdAndProfessorUserId(Long npcId, Long professorId);
 
+    List<NPCConversation> findByLecture_LectureId(Long lectureId);
+
+    void deleteByLecture_LectureId(Long lectureId);
+
+    boolean existsByLecture_LectureId(Long lectureId);
+
     // 교수용: 본인 NPC 목록 필터 조회
     @Query("""
         select n from NPCConversation n where n.professor.userId = :professorId
