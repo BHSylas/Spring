@@ -125,4 +125,17 @@ public class Lecture {
         this.approvedAt = null;
         this.rejectReason = null;
     }
+
+    public void inactivate(User admin) {
+        this.status = LectureStatus.INACTIVE;
+        this.approvedBy = admin;
+        this.approvedAt = LocalDateTime.now();
+    }
+
+    public void reactivate(User admin) {
+        this.status = LectureStatus.APPROVED;
+        this.approvedBy = admin;
+        this.approvedAt = LocalDateTime.now();
+        this.rejectReason = null;
+    }
 }
