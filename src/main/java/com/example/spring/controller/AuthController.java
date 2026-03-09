@@ -2,15 +2,15 @@ package com.example.spring.controller;
 
 import com.example.spring.common.exception.UnauthorizedException;
 import com.example.spring.dto.*;
+import com.example.spring.security.CurrentUser;
 import com.example.spring.service.AuthService;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -89,6 +89,17 @@ public class AuthController {
         if (refreshToken != null && !refreshToken.isBlank()) {
             authService.logout(refreshToken); // DB revoke
         }
+        clearRefreshCookie(res);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/me")
+    public ResponseEntity<Void> withdraw(
+            Authentication authentication,
+            HttpServletResponse res
+    ) {
+        Long currentUserId = CurrentUser.getUserId(authentication);
+        authService.withdraw(currentUserId);
         clearRefreshCookie(res);
         return ResponseEntity.noContent().build();
     }

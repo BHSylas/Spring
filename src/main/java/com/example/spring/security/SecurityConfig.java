@@ -49,6 +49,9 @@ public class SecurityConfig {
                                 "/api/auth/verify-email-code"
                         ).permitAll()
 
+                        // 공개 교수 소개
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/professor/*/profile").permitAll()
+
                         // 공개 썸네일
                         .requestMatchers("/thumbnails/**").permitAll()
 

@@ -39,6 +39,9 @@ public class User {
     @Column(name = "email_verified_at")
     private LocalDateTime emailVerifiedAt;
 
+    @Column(name = "withdrawn_at")
+    private LocalDateTime withdrawnAt;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -75,11 +78,20 @@ public class User {
         this.emailVerifiedAt = LocalDateTime.now();
     }
 
+    public void withdraw() {
+        this.userStatus = UserStatus.WITHDRAWN;
+        this.withdrawnAt = LocalDateTime.now();
+    }
+
     public boolean isBlocked() {
         return this.userStatus == UserStatus.BLOCKED;
     }
 
     public boolean isPending() {
         return this.userStatus == UserStatus.PENDING;
+    }
+
+    public boolean isWithdrawn() {
+        return this.userStatus == UserStatus.WITHDRAWN;
     }
 }

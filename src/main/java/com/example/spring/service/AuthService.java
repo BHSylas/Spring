@@ -1,8 +1,6 @@
 package com.example.spring.service;
 
-import com.example.spring.common.exception.ConflictException;
-import com.example.spring.common.exception.RefreshReplayDetectedException;
-import com.example.spring.common.exception.UnauthorizedException;
+import com.example.spring.common.exception.*;
 import com.example.spring.entity.*;
 import com.example.spring.dto.*;
 import com.example.spring.repository.EmailVerificationCodeRepository;
@@ -144,6 +142,10 @@ public class AuthService {
             throw new UnauthorizedException("이메일 인증 후 로그인할 수 있습니다.");
         }
 
+        if (u.isWithdrawn()) {
+            throw new UnauthorizedException("탈퇴한 계정입니다.");
+        }
+
         if (u.isBlocked()) {
             refreshTokenRepository.revokeAllActiveByUserId(u.getUserId());
             throw new UnauthorizedException("차단된 계정입니다. 관리자에게 문의하세요.");
@@ -210,6 +212,11 @@ public class AuthService {
             throw new UnauthorizedException("이메일 인증 후 로그인할 수 있습니다.");
         }
 
+        if (u.isWithdrawn()) {
+            refreshTokenRepository.revokeAllActiveByUserId(userId);
+            throw new UnauthorizedException("탈퇴한 계정입니다.");
+        }
+
         if (u.isBlocked()) {
             refreshTokenRepository.revokeAllActiveByUserId(userId);
             throw new UnauthorizedException("차단된 계정입니다. 관리자에게 문의하세요.");
@@ -229,6 +236,25 @@ public class AuthService {
     public void logout(String refreshToken) {
         if (refreshToken == null || refreshToken.isBlank()) return;
         refreshTokenRepository.revokeIfActive(TokenHash.sha256Hex(refreshToken));
+    }
+
+    // 회원 탈퇴
+    @Transactional
+    public void withdraw(Long currentUserId) {
+        User user = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new NotFoundException("사용자를 찾을 수 없습니다."));
+
+        if (user.isWithdrawn()) {
+            throw new BadRequestException("이미 탈퇴한 계정입니다.");
+        }
+
+        // 학생만 탈퇴 허용
+        if (user.getUserRole() != 0) {
+            throw new BadRequestException("학생 계정만 회원탈퇴할 수 있습니다.");
+        }
+
+        refreshTokenRepository.revokeAllActiveByUserId(currentUserId);
+        user.withdraw();
     }
 
 
