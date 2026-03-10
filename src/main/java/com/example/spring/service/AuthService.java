@@ -259,8 +259,10 @@ public class AuthService {
         String withdrawnEmail = "withdrawn_" + user.getUserId() + "_" + user.getUserEmail();
 
         refreshTokenRepository.revokeAllActiveByUserId(currentUserId);
+
         user.changeEmail(withdrawnEmail);
         user.withdraw();
+        userRepository.saveAndFlush(user);
     }
 
 
