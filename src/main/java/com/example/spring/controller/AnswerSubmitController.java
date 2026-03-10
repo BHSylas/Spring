@@ -23,4 +23,12 @@ public class AnswerSubmitController {
                                                                 @RequestBody AnswerSubmitRequestDTO answerSubmitRequestDTO) {
         return ResponseEntity.ok(answerSubmitService.answerSubmit(userId,ConversationId,answerSubmitRequestDTO.getUserAnswer()));
     }
+
+    @DeleteMapping("/answer/{conversationId}/reset")
+    public ResponseEntity<Void> resetAnswer(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long conversationId) {
+        answerSubmitService.resetAnswer(userId, conversationId);
+        return ResponseEntity.ok().build();
+    }
 }
