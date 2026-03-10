@@ -46,7 +46,11 @@ public class SecurityConfig {
                                 "/api/auth/login",
                                 "/api/auth/refresh",
                                 "/api/auth/send-verification-code",
-                                "/api/auth/verify-email-code"
+                                "/api/auth/verify-email-code",
+                                "/api/auth/find-email",
+                                "/api/auth/password-reset/send-code",
+                                "/api/auth/password-reset/verify-code",
+                                "/api/auth/password-reset/confirm"
                         ).permitAll()
 
                         // 공개 교수 소개
