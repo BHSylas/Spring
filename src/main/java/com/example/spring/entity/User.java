@@ -78,6 +78,10 @@ public class User {
         this.emailVerifiedAt = LocalDateTime.now();
     }
 
+    public void changeEmail(String newEmail) {
+        this.userEmail = newEmail;
+    }
+
     public void withdraw() {
         this.userStatus = UserStatus.WITHDRAWN;
         this.withdrawnAt = LocalDateTime.now();

@@ -1,5 +1,6 @@
 package com.example.spring.security;
 
+import com.example.spring.entity.UserRole;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -45,7 +46,7 @@ public class JwtService {
         return Jwts.builder()
                 .subject(String.valueOf(userId))
                 .claim("email", email)
-                .claim("role", roleCode)     // byte code
+                .claim("role", UserRole.fromCode(roleCode).getAuthority())
                 .claim("typ", "access")
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(exp))

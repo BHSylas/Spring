@@ -13,6 +13,7 @@ import java.util.List;
 public class CustomUserDetailsService implements UserDetailsService {
 
     private final UserRepository userRepository;
+
     public CustomUserDetailsService(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
@@ -20,7 +21,19 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         User u = userRepository.findByUserEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+                .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다."));
+
+        if (u.isWithdrawn()) {
+            throw new UsernameNotFoundException("탈퇴한 계정입니다.");
+        }
+
+        if (u.isBlocked()) {
+            throw new UsernameNotFoundException("차단된 계정입니다.");
+        }
+
+        if (u.isPending()) {
+            throw new UsernameNotFoundException("이메일 인증이 필요한 계정입니다.");
+        }
 
         String authority = UserRole.fromCode(u.getUserRole()).getAuthority();
 
@@ -31,4 +44,3 @@ public class CustomUserDetailsService implements UserDetailsService {
         );
     }
 }
-

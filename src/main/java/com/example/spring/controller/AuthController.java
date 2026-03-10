@@ -98,6 +98,7 @@ public class AuthController {
             Authentication authentication,
             HttpServletResponse res
     ) {
+        System.out.println(">>> AuthController withdraw 진입");
         Long currentUserId = CurrentUser.getUserId(authentication);
         authService.withdraw(currentUserId);
         clearRefreshCookie(res);
