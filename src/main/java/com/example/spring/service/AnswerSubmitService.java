@@ -93,6 +93,20 @@ public class AnswerSubmitService {
 
     }
 
+    public void resetAnswer(Long userId, Long conversationId) {
+        NPCConversation npc = npcConversationRepository.findById(conversationId)
+                .orElseThrow(() -> new IllegalArgumentException("NPC 대화 없음"));
+
+        userNpcAnswerRepository.findByUserUserIdAndNpcConversation(userId, npc)
+                .ifPresent(record -> {
+                    record.setCorrect(false);
+                    record.setLocked(false);
+                    record.setAttempts(0);
+                    record.setAnsweredAt(null);
+                    userNpcAnswerRepository.save(record);
+                });
+    }
+
     // =========================================================
     // 레벨별 정답 체크
     // =========================================================
