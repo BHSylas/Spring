@@ -50,7 +50,7 @@ public class AuthService {
     public void sendVerificationCode(String rawEmail) {
         String email = normalizeEmail(rawEmail);
 
-        if (userRepository.existsByUserEmail(email)) {
+        if (userRepository.existsByUserEmailAndUserStatusNot(email, UserStatus.WITHDRAWN)) {
             throw new ConflictException("이미 사용 중인 이메일입니다.");
         }
 
@@ -98,8 +98,12 @@ public class AuthService {
     public void signup(SignUpRequestDTO req) {
         String email = normalizeEmail(req.getEmail());
 
-        if (userRepository.existsByUserEmail(email)) {
+        if (userRepository.existsByUserEmailAndUserStatusNot(email, UserStatus.WITHDRAWN)) {
             throw new ConflictException("이미 사용 중인 이메일입니다.");
+        }
+
+        if (userRepository.existsByUserNickname(req.getNickname().trim())) {
+            throw new ConflictException("이미 사용 중인 닉네임입니다.");
         }
 
         EmailVerificationCode verificationCode = emailVerificationCodeRepository.findByEmail(email)
@@ -248,12 +252,14 @@ public class AuthService {
             throw new BadRequestException("이미 탈퇴한 계정입니다.");
         }
 
-        // 학생만 탈퇴 허용
         if (user.getUserRole() != 0) {
             throw new BadRequestException("학생 계정만 회원탈퇴할 수 있습니다.");
         }
 
+        String withdrawnEmail = "withdrawn_" + user.getUserId() + "_" + user.getUserEmail();
+
         refreshTokenRepository.revokeAllActiveByUserId(currentUserId);
+        user.changeEmail(withdrawnEmail);
         user.withdraw();
     }
 
