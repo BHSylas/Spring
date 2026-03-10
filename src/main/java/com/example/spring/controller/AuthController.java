@@ -13,6 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -108,6 +110,41 @@ public class AuthController {
     @GetMapping("/me")
     public ResponseEntity<MeResponseDTO> me() {
         return ResponseEntity.ok(authService.me());
+    }
+
+    @PatchMapping("/me/profile")
+    public MeResponseDTO updateMyProfile(@RequestBody @Valid UpdateMyProfileRequestDTO req,
+                                         Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof Long)) {
+            throw new UnauthorizedException("인증 정보가 없습니다.");
+        }
+
+        Long currentUserId = (Long) authentication.getPrincipal();
+        return authService.updateMyProfile(currentUserId, req);
+    }
+
+    @PostMapping("/find-email")
+    public Map<String, String> findEmail(@RequestBody @Valid FindEmailRequestDTO req) {
+        authService.findEmail(req);
+        return Map.of("message", "입력하신 정보와 일치하는 계정이 있으면 안내 메일을 발송했습니다.");
+    }
+
+    @PostMapping("/password-reset/send-code")
+    public Map<String, String> sendPasswordResetCode(@RequestBody @Valid PasswordResetSendCodeRequestDTO req) {
+        authService.sendPasswordResetCode(req);
+        return Map.of("message", "인증번호가 발송되었습니다.");
+    }
+
+    @PostMapping("/password-reset/verify-code")
+    public Map<String, String> verifyPasswordResetCode(@RequestBody @Valid PasswordResetVerifyCodeRequestDTO req) {
+        authService.verifyPasswordResetCode(req);
+        return Map.of("message", "인증이 완료되었습니다.");
+    }
+
+    @PostMapping("/password-reset/confirm")
+    public Map<String, String> resetPassword(@RequestBody @Valid PasswordResetConfirmRequestDTO req) {
+        authService.resetPassword(req);
+        return Map.of("message", "비밀번호가 변경되었습니다.");
     }
 
     // ===== cookie helpers =====

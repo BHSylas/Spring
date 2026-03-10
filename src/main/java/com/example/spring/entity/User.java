@@ -61,6 +61,10 @@ public class User {
         if (this.userStatus == null) this.userStatus = UserStatus.PENDING;
     }
 
+    public void changeName(String newName) {
+        this.userName = newName;
+    }
+
     public void changeNickname(String newNickname) {
         this.userNickname = newNickname;
     }
@@ -71,6 +75,10 @@ public class User {
 
     public void changeStatus(UserStatus newStatus) {
         this.userStatus = newStatus;
+    }
+
+    public void changePassword(String newPassword) {
+        this.userPw = newPassword;
     }
 
     public void verifyEmail() {

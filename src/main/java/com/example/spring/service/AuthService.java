@@ -57,9 +57,11 @@ public class AuthService {
         String code = generate6DigitCode();
         LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(5);
 
-        EmailVerificationCode verificationCode = emailVerificationCodeRepository.findByEmail(email)
+        EmailVerificationCode verificationCode = emailVerificationCodeRepository
+                .findByEmailAndPurpose(email, VerificationPurpose.SIGNUP)
                 .orElseGet(() -> EmailVerificationCode.builder()
                         .email(email)
+                        .purpose(VerificationPurpose.SIGNUP)
                         .code(code)
                         .expiresAt(expiresAt)
                         .build());
@@ -77,7 +79,8 @@ public class AuthService {
     public void verifyEmailCode(String rawEmail, String inputCode) {
         String email = normalizeEmail(rawEmail);
 
-        EmailVerificationCode verificationCode = emailVerificationCodeRepository.findByEmail(email)
+        EmailVerificationCode verificationCode = emailVerificationCodeRepository
+                .findByEmailAndPurpose(email, VerificationPurpose.SIGNUP)
                 .orElseThrow(() -> new UnauthorizedException("인증번호 요청 이력이 없습니다."));
 
         if (verificationCode.isExpired()) {
@@ -106,7 +109,8 @@ public class AuthService {
             throw new ConflictException("이미 사용 중인 닉네임입니다.");
         }
 
-        EmailVerificationCode verificationCode = emailVerificationCodeRepository.findByEmail(email)
+        EmailVerificationCode verificationCode = emailVerificationCodeRepository
+                .findByEmailAndPurpose(email, VerificationPurpose.SIGNUP)
                 .orElseThrow(() -> new UnauthorizedException("이메일 인증을 먼저 완료해주세요."));
 
         if (verificationCode.isExpired()) {
@@ -129,7 +133,7 @@ public class AuthService {
         user.verifyEmail(); // emailVerifiedAt 세팅
         userRepository.save(user);
 
-        emailVerificationCodeRepository.deleteByEmail(email);
+        emailVerificationCodeRepository.deleteByEmailAndPurpose(email, VerificationPurpose.SIGNUP);
     }
 
     public TokenPairDTO login(LoginRequestDTO req) {
@@ -242,6 +246,43 @@ public class AuthService {
         refreshTokenRepository.revokeIfActive(TokenHash.sha256Hex(refreshToken));
     }
 
+    @Transactional
+    public MeResponseDTO updateMyProfile(Long currentUserId, UpdateMyProfileRequestDTO req) {
+        User user = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new NotFoundException("사용자를 찾을 수 없습니다."));
+
+        if (user.isWithdrawn()) {
+            throw new BadRequestException("탈퇴한 계정은 정보를 수정할 수 없습니다.");
+        }
+
+        if (user.isBlocked()) {
+            throw new BadRequestException("차단된 계정은 정보를 수정할 수 없습니다.");
+        }
+
+        String newName = req.getName() == null ? null : req.getName().trim();
+        String newNickname = req.getNickname() == null ? null : req.getNickname().trim();
+
+        if (newName == null || newName.isBlank()) {
+            throw new BadRequestException("이름은 비어 있을 수 없습니다.");
+        }
+
+        if (newNickname == null || newNickname.isBlank()) {
+            throw new BadRequestException("닉네임은 비어 있을 수 없습니다.");
+        }
+
+        if (!user.getUserNickname().equals(newNickname)
+                && userRepository.existsByUserNickname(newNickname)) {
+            throw new ConflictException("이미 사용 중인 닉네임입니다.");
+        }
+
+        user.changeName(newName);
+        user.changeNickname(newNickname);
+
+        userRepository.saveAndFlush(user);
+
+        return new MeResponseDTO(user);
+    }
+
     // 회원 탈퇴
     @Transactional
     public void withdraw(Long currentUserId) {
@@ -263,6 +304,119 @@ public class AuthService {
         user.changeEmail(withdrawnEmail);
         user.withdraw();
         userRepository.saveAndFlush(user);
+    }
+
+    @Transactional(readOnly = true)
+    public void findEmail(FindEmailRequestDTO req) {
+        String name = req.getName() == null ? null : req.getName().trim();
+        String nickname = req.getNickname() == null ? null : req.getNickname().trim();
+
+        if (name == null || name.isBlank() || nickname == null || nickname.isBlank()) {
+            throw new BadRequestException("이름과 닉네임을 모두 입력해주세요.");
+        }
+
+        userRepository.findByUserNameAndUserNicknameAndUserStatus(name, nickname, UserStatus.ACTIVE)
+                .ifPresent(user -> emailVerificationMailService.sendFoundEmailNotice(user.getUserEmail()));
+    }
+
+    @Transactional
+    public void sendPasswordResetCode(PasswordResetSendCodeRequestDTO req) {
+        String email = normalizeEmail(req.getEmail());
+
+        User user = userRepository.findByUserEmail(email)
+                .orElseThrow(() -> new NotFoundException("가입된 계정을 찾을 수 없습니다."));
+
+        if (user.isWithdrawn()) {
+            throw new BadRequestException("탈퇴한 계정은 비밀번호를 재설정할 수 없습니다.");
+        }
+
+        if (user.isBlocked()) {
+            throw new BadRequestException("차단된 계정은 비밀번호를 재설정할 수 없습니다.");
+        }
+
+        String code = generate6DigitCode();
+        LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(5);
+
+        EmailVerificationCode verificationCode = emailVerificationCodeRepository
+                .findByEmailAndPurpose(email, VerificationPurpose.PASSWORD_RESET)
+                .orElseGet(() -> EmailVerificationCode.builder()
+                        .email(email)
+                        .purpose(VerificationPurpose.PASSWORD_RESET)
+                        .code(code)
+                        .expiresAt(expiresAt)
+                        .build());
+
+        if (verificationCode.getId() == null) {
+            emailVerificationCodeRepository.save(verificationCode);
+        } else {
+            verificationCode.renew(code, expiresAt);
+        }
+
+        emailVerificationMailService.sendPasswordResetCode(email, code);
+    }
+
+    @Transactional
+    public void verifyPasswordResetCode(PasswordResetVerifyCodeRequestDTO req) {
+        String email = normalizeEmail(req.getEmail());
+
+        EmailVerificationCode verificationCode = emailVerificationCodeRepository
+                .findByEmailAndPurpose(email, VerificationPurpose.PASSWORD_RESET)
+                .orElseThrow(() -> new UnauthorizedException("인증번호 요청 이력이 없습니다."));
+
+        if (verificationCode.isExpired()) {
+            throw new UnauthorizedException("인증번호가 만료되었습니다. 다시 요청해주세요.");
+        }
+
+        if (!verificationCode.matches(req.getCode())) {
+            throw new UnauthorizedException("인증번호가 올바르지 않습니다.");
+        }
+
+        if (!verificationCode.isVerified()) {
+            verificationCode.markVerified();
+        }
+    }
+
+    @Transactional
+    public void resetPassword(PasswordResetConfirmRequestDTO req) {
+        String email = normalizeEmail(req.getEmail());
+
+        User user = userRepository.findByUserEmail(email)
+                .orElseThrow(() -> new NotFoundException("가입된 계정을 찾을 수 없습니다."));
+
+        if (user.isWithdrawn()) {
+            throw new BadRequestException("탈퇴한 계정은 비밀번호를 재설정할 수 없습니다.");
+        }
+
+        if (user.isBlocked()) {
+            throw new BadRequestException("차단된 계정은 비밀번호를 재설정할 수 없습니다.");
+        }
+
+        EmailVerificationCode verificationCode = emailVerificationCodeRepository
+                .findByEmailAndPurpose(email, VerificationPurpose.PASSWORD_RESET)
+                .orElseThrow(() -> new UnauthorizedException("인증번호 요청 이력이 없습니다."));
+
+        if (verificationCode.isExpired()) {
+            throw new UnauthorizedException("인증번호가 만료되었습니다. 다시 요청해주세요.");
+        }
+
+        if (!verificationCode.matches(req.getCode())) {
+            throw new UnauthorizedException("인증번호가 올바르지 않습니다.");
+        }
+
+        if (!verificationCode.isVerified()) {
+            throw new UnauthorizedException("인증 확인이 완료되지 않았습니다.");
+        }
+
+        String newPassword = req.getNewPassword() == null ? null : req.getNewPassword().trim();
+        if (newPassword == null || newPassword.isBlank()) {
+            throw new BadRequestException("새 비밀번호를 입력해주세요.");
+        }
+
+        user.changePassword(passwordEncoder.encode(newPassword));
+        userRepository.saveAndFlush(user);
+
+        refreshTokenRepository.revokeAllActiveByUserId(user.getUserId());
+        emailVerificationCodeRepository.deleteByEmailAndPurpose(email, VerificationPurpose.PASSWORD_RESET);
     }
 
 

@@ -8,19 +8,24 @@ import java.time.LocalDateTime;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
-@Table(name = "email_verification_codes", indexes = {
-        @Index(name = "idx_email_verify_email", columnList = "email", unique = true)
-})
+@Table(name = "email_verification_codes",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_email_verification_email_purpose", columnNames = {"email", "purpose"})
+        })
 public class EmailVerificationCode {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "email", nullable = false, length = 120, unique = true)
+    @Column(name = "email", nullable = false, length = 120)
     private String email;
 
-    @Column(name = "code", nullable = false, length = 6)
+    @Column(nullable = false, length = 20)
+    @Enumerated(EnumType.STRING)
+    private VerificationPurpose purpose;
+
+    @Column(name = "code", nullable = false, length = 10)
     private String code;
 
     @Column(name = "expires_at", nullable = false)
@@ -33,8 +38,9 @@ public class EmailVerificationCode {
     private LocalDateTime createdAt;
 
     @Builder
-    private EmailVerificationCode(String email, String code, LocalDateTime expiresAt) {
+    private EmailVerificationCode(String email, VerificationPurpose purpose, String code, LocalDateTime expiresAt) {
         this.email = email;
+        this.purpose = purpose;
         this.code = code;
         this.expiresAt = expiresAt;
     }
