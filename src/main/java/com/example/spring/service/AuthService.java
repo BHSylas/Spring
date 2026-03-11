@@ -271,7 +271,7 @@ public class AuthService {
         }
 
         if (!user.getUserNickname().equals(newNickname)
-                && userRepository.existsByUserNickname(newNickname)) {
+                && userRepository.existsByUserNicknameAndUserStatusNot(newNickname, UserStatus.WITHDRAWN)) {
             throw new ConflictException("이미 사용 중인 닉네임입니다.");
         }
 
