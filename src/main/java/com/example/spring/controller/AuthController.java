@@ -115,11 +115,7 @@ public class AuthController {
     @PatchMapping("/me/profile")
     public MeResponseDTO updateMyProfile(@RequestBody @Valid UpdateMyProfileRequestDTO req,
                                          Authentication authentication) {
-        if (authentication == null || !(authentication.getPrincipal() instanceof Long)) {
-            throw new UnauthorizedException("인증 정보가 없습니다.");
-        }
-
-        Long currentUserId = (Long) authentication.getPrincipal();
+        Long currentUserId = CurrentUser.getUserId(authentication);
         return authService.updateMyProfile(currentUserId, req);
     }
 
